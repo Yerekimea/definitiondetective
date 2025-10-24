@@ -3,6 +3,7 @@
 import type { FC, ReactNode } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/hooks/use-auth';
+import { SoundProvider } from "@/hooks/use-sound";
 
 interface ProvidersProps {
   children: ReactNode;
@@ -11,8 +12,10 @@ interface ProvidersProps {
 const Providers: FC<ProvidersProps> = ({ children }) => {
   return (
     <AuthProvider>
-      {children}
-      <Toaster />
+      <SoundProvider>
+        {children}
+        <Toaster />
+      </SoundProvider>
     </AuthProvider>
   );
 };

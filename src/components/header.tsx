@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Puzzle, LogIn, LogOut, User } from "lucide-react";
+import { Puzzle, LogIn, LogOut, User, Volume2, VolumeX } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -17,10 +17,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { ImagePlaceholder } from "@/lib/placeholder-images";
 import { useEffect, useState } from "react";
 import placeholderData from '@/lib/placeholder-images.json';
+import { useSound } from "@/hooks/use-sound";
 
 export default function Header() {
   const { user, loading, logout } = useAuth();
   const [avatarImage, setAvatarImage] = useState<ImagePlaceholder | undefined>();
+  const { isMuted, toggleMute } = useSound();
 
   useEffect(() => {
     setAvatarImage(placeholderData.placeholderImages.find(p => p.id === "1"));
@@ -46,6 +48,10 @@ export default function Header() {
           </nav>
         </div>
         <div className="flex flex-1 items-center justify-end space-x-2">
+           <Button variant="ghost" size="icon" onClick={toggleMute}>
+            {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+            <span className="sr-only">Toggle sound</span>
+          </Button>
           {loading ? (
             <Skeleton className="h-8 w-8 rounded-full" />
           ) : user ? (

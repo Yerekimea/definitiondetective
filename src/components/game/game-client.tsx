@@ -7,16 +7,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Keyboard } from "@/components/game/keyboard";
 import { Lightbulb, RotateCw, XCircle, Award, PartyPopper } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { getHintAction } from "@/lib/actions";
+import { getHintAction, getSoundAction } from "@/lib/actions";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { useFirestore } from "@/firebase";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc, updateDoc, increment } from "firebase/firestore";
+import { useSound } from "@/hooks/use-sound";
 
 type GameState = "playing" | "won" | "lost";
 type Difficulty = "easy" | "medium" | "hard";
 const MAX_INCORRECT_TRIES = 6;
+
+type SoundMap = {
+  [key: string]: string | null;
+}
 
 export default function GameClient() {
   const { user } = useAuth();
@@ -29,6 +34,25 @@ export default function GameClient() {
   const [score, setScore] = useState(0);
   const [level, setLevel] = useState(1);
   const [isHintLoading, startHintTransition] = useTransition();
+
+  const [sounds, setSounds] = useState<SoundMap>({});
+  const { playSound } = useSound();
+  
+  useEffect(() => {
+    const fetchSounds = async () => {
+      const soundKeys = ['correct', 'incorrect', 'win'];
+      const soundPromises = soundKeys.map(key => getSoundAction(key));
+      const results = await Promise.all(soundPromises);
+      const newSounds: SoundMap = {};
+      results.forEach((result, index) => {
+        if (result.soundDataUri) {
+          newSounds[soundKeys[index]] = result.soundDataUri;
+        }
+      });
+      setSounds(newSounds);
+    };
+    fetchSounds();
+  }, []);
 
   const { toast } = useToast();
 
@@ -60,10 +84,12 @@ export default function GameClient() {
     const lowerLetter = letter.toLowerCase();
     if (wordData?.word.toLowerCase().includes(lowerLetter)) {
       setGuessedLetters(prev => ({ ...prev, correct: [...prev.correct, lowerLetter] }));
+      if (sounds.correct) playSound(sounds.correct);
     } else {
       setGuessedLetters(prev => ({ ...prev, incorrect: [...prev.incorrect, lowerLetter] }));
+      if (sounds.incorrect) playSound(sounds.incorrect);
     }
-  }, [wordData, gameState, guessedLetters]);
+  }, [wordData, gameState, guessedLetters, sounds, playSound]);
 
   const handleHintRequest = () => {
     if (!wordData) return;
@@ -89,10 +115,10 @@ export default function GameClient() {
   const displayedWord = useMemo(() => {
     if (!wordData) return [];
     const wordChars = wordData.word.split('');
-    return wordChars.map((char) => {
+    return wordChars.map((char, index) => {
       const lowerChar = char.toLowerCase();
       const isGuessed = guessedLetters.correct.includes(lowerChar);
-      const isHinted = hint?.split('')[wordChars.indexOf(char)]?.toLowerCase() === lowerChar;
+      const isHinted = hint?.split('')[index]?.toLowerCase() === lowerChar;
       if (isGuessed || isHinted) {
         return { char, revealed: true };
       }
@@ -104,7 +130,7 @@ export default function GameClient() {
     if (user) {
       const userRef = doc(firestore, "users", user.uid);
       await updateDoc(userRef, {
-        totalScore: newScore,
+        totalScore: increment(newScore),
         highestLevel: newLevel,
         updatedAt: new Date().toISOString(),
       });
@@ -116,16 +142,20 @@ export default function GameClient() {
     const isWon = wordData.word.split('').every(char => guessedLetters.correct.includes(char.toLowerCase()));
     if (isWon) {
       setGameState("won");
+      if (sounds.win) playSound(sounds.win);
       const difficulty = getDifficultyForLevel(level);
-      const newScore = score + (difficulty === 'easy' ? 10 : difficulty === 'medium' ? 20 : 30);
+      const scoreGained = (difficulty === 'easy' ? 10 : difficulty === 'medium' ? 20 : 30);
+      setScore(s => s + scoreGained);
       const newLevel = level + 1;
-      setScore(newScore);
-      updateFirestoreUser(newScore, newLevel);
-      setTimeout(() => setLevel(newLevel), 2000);
+      updateFirestoreUser(scoreGained, newLevel);
+      setTimeout(() => {
+        setLevel(newLevel);
+        startNewGame(newLevel);
+      }, 2000);
     } else if (guessedLetters.incorrect.length >= MAX_INCORRECT_TRIES) {
       setGameState("lost");
     }
-  }, [guessedLetters, wordData, level, score, user]);
+  }, [guessedLetters, wordData, level, score, user, sounds, playSound, startNewGame]);
 
 
   const incorrectTriesLeft = MAX_INCORRECT_TRIES - guessedLetters.incorrect.length;
@@ -170,7 +200,7 @@ export default function GameClient() {
           </AlertDescription>
           {gameState === 'lost' && (
              <div className="mt-4 flex justify-center gap-4">
-                <Button onClick={() => setLevel(1)}>
+                <Button onClick={() => { setLevel(1); setScore(0); }}>
                     <RotateCw className="mr-2 h-4 w-4" /> Start Over
                 </Button>
             </div>
