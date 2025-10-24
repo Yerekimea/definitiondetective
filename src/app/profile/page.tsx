@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useAuth } from "@/hooks/use-auth";
@@ -31,10 +32,13 @@ export default function ProfilePage() {
     if (!authLoading && !user) {
       router.push("/login");
     }
-    setAvatarImage(placeholderData.placeholderImages.find(p => p.id === "1"));
   }, [user, authLoading, router]);
 
-  const loading = authLoading || profileLoading;
+  useEffect(() => {
+    setAvatarImage(placeholderData.placeholderImages.find(p => p.id === "1"));
+  }, []);
+
+  const loading = authLoading || profileLoading || !user;
 
   if (loading || !userProfile) {
     return (

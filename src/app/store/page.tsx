@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState } from "react";
+import { useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import { doc, updateDoc, arrayUnion, increment } from "firebase/firestore";
@@ -39,10 +40,11 @@ export default function StorePage() {
 
   const { data: userProfile, isLoading: profileLoading } = useDoc<UserProfile>(userProfileRef);
 
-  if (!authLoading && !user) {
-    router.push("/login");
-    return null;
-  }
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push("/login");
+    }
+  }, [authLoading, user, router]);
   
   const handlePurchaseTheme = async (themeId: string) => {
     if (!userProfileRef) return;
@@ -58,7 +60,7 @@ export default function StorePage() {
         errorEmitter.emit('permission-error', permissionError);
     });
     
-    setTheme(themeId);
+    setTheme(themeId as any);
     toast({ title: "Purchase Successful!", description: `You've unlocked and applied the ${themes.find(t=>t.id === themeId)?.name} theme.` });
   };
 
@@ -81,7 +83,7 @@ export default function StorePage() {
   
   const loading = authLoading || profileLoading;
 
-  if (loading) {
+  if (loading || !user) {
     return (
         <div className="container mx-auto py-8">
             <div className="text-center mb-8">
