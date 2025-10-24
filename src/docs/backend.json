@@ -48,6 +48,10 @@
             "items": {
                 "type": "string"
             }
+        },
+        "hints": {
+            "type": "number",
+            "description": "The number of available hints the user has."
         }
       },
       "required": [
@@ -57,7 +61,8 @@
         "createdAt",
         "totalScore",
         "highestLevel",
-        "rank"
+        "rank",
+        "hints"
       ]
     },
     "GameSession": {

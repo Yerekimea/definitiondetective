@@ -8,6 +8,7 @@ export type UserProfile = {
     createdAt: string;
     updatedAt: string;
     purchasedThemes?: string[];
+    hints: number;
 };
 
 export type GameSession = {

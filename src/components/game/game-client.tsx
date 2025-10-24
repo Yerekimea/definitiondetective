@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useTransition } from "react";
@@ -117,7 +118,21 @@ export default function GameClient() {
   }, [wordData, gameState, guessedLetters, sounds, playSound]);
 
   const getHint = async (isFree: boolean = false) => {
-    if (!wordData) return;
+    if (!wordData || !userProfileRef) return;
+    
+    if (!isFree) {
+      if (userProfile && userProfile.hints > 0) {
+         updateDoc(userProfileRef, { hints: increment(-1) }).catch((err) => console.error(err));
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Out of Hints",
+          description: "You don't have any hints left. Watch an ad or buy more in the store.",
+        });
+        return;
+      }
+    }
+
     startHintTransition(async () => {
       const { hint: newHint, error } = await getHintAction({
         word: wordData.word,
@@ -130,11 +145,12 @@ export default function GameClient() {
           title: "Hint Error",
           description: error,
         });
+         // If AI fails, refund the hint
+        if (!isFree) {
+          updateDoc(userProfileRef, { hints: increment(1) }).catch((err) => console.error(err));
+        }
       } else if (newHint) {
         setHint(newHint);
-        if (!isFree) {
-          setScore(s => Math.max(0, s - 5)); // Penalty for using paid hint
-        }
       }
     });
   };
@@ -228,7 +244,7 @@ export default function GameClient() {
   }, [guessedLetters, wordData, level, sounds, playSound, startNewGame, updateFirestoreUser, gameState, displayedWord, hint]);
 
   const incorrectTriesLeft = MAX_INCORRECT_TRIES - guessedLetters.incorrect.length;
-  const hintDisabled = isHintLoading || !!hint || !user;
+  const hintDisabled = isHintLoading || !!hint || !user || (userProfile?.hints ?? 0) === 0;
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-8">
@@ -236,6 +252,10 @@ export default function GameClient() {
         <div className="flex items-center gap-2 text-lg">
           <Award className="h-6 w-6 text-primary" />
           Score: <span className="font-bold">{score.toLocaleString()}</span>
+        </div>
+        <div className="flex items-center gap-2 text-lg">
+          <Lightbulb className="h-6 w-6 text-yellow-400" />
+          Hints: <span className="font-bold">{userProfile?.hints ?? 0}</span>
         </div>
         <div className="flex items-center gap-2 text-lg">
           Level: <span className="font-bold">{level}</span>
@@ -281,9 +301,9 @@ export default function GameClient() {
           <div className="flex justify-center gap-4">
             <Button onClick={() => getHint(false)} disabled={hintDisabled}>
               <Lightbulb className={cn("mr-2 h-4 w-4", isHintLoading && !isWatchingAd && "animate-spin")} />
-              {isHintLoading && !isWatchingAd ? 'Getting Hint...' : 'Get a Hint (-5 score)'}
+              {isHintLoading && !isWatchingAd ? 'Getting Hint...' : 'Use a Hint'}
             </Button>
-             <Button onClick={handleRewardedAd} disabled={hintDisabled} variant="outline">
+             <Button onClick={handleRewardedAd} disabled={isHintLoading || !!hint || !user} variant="outline">
               <Clapperboard className={cn("mr-2 h-4 w-4", isWatchingAd && "animate-spin")} />
               {isWatchingAd ? 'Loading Ad...' : 'Watch Ad for Hint'}
             </Button>
@@ -313,3 +333,5 @@ export default function GameClient() {
     </div>
   );
 }
+
+    

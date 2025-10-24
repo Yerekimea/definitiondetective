@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useFirestore, useDoc, useMemoFirebase } from "@/firebase";
-import { doc, updateDoc, arrayUnion } from "firebase/firestore";
+import { doc, updateDoc, arrayUnion, increment } from "firebase/firestore";
 import type { UserProfile } from "@/lib/firebase-types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -58,15 +58,25 @@ export default function StorePage() {
         errorEmitter.emit('permission-error', permissionError);
     });
     
-    // @ts-ignore
     setTheme(themeId);
     toast({ title: "Purchase Successful!", description: `You've unlocked and applied the ${themes.find(t=>t.id === themeId)?.name} theme.` });
   };
 
   const handlePurchaseHints = async (packId: string, amount: number) => {
-    // In a real app, you would add the hints to the user's profile.
-    // For this simulation, we'll just show a toast.
-    toast({ title: "Purchase Successful!", description: `You've received ${amount} hints.` });
+    if (!userProfileRef) return;
+
+    const updateData = { hints: increment(amount) };
+    updateDoc(userProfileRef, updateData)
+        .catch((serverError) => {
+            const permissionError = new FirestorePermissionError({
+                path: userProfileRef.path,
+                operation: 'update',
+                requestResourceData: updateData,
+            });
+            errorEmitter.emit('permission-error', permissionError);
+        });
+
+    toast({ title: "Purchase Successful!", description: `You've received ${amount} new hints.` });
   };
   
   const loading = authLoading || profileLoading;

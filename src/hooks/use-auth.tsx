@@ -81,6 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           rank: getRankForScore(0),
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
+          hints: 5, // Start with 5 free hints
         };
 
         setDoc(userRef, userData)
