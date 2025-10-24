@@ -7,11 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export default function SignupPage() {
-  const { login, user, loading } = useAuth();
+  const { signup, user, loading } = useAuth();
   const router = useRouter();
+  const [name, setName] = useState("Alex Doe");
+  const [email, setEmail] = useState("alex.doe@example.com");
+  const [password, setPassword] = useState("password");
 
   useEffect(() => {
     if (user) {
@@ -19,9 +22,9 @@ export default function SignupPage() {
     }
   }, [user, router]);
 
-  const handleSignup = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    login();
+    await signup(email, password, name);
   };
   
   if (loading || user) {
@@ -45,20 +48,20 @@ export default function SignupPage() {
           <CardContent className="grid gap-4">
             <div className="grid gap-2">
               <Label htmlFor="name">Name</Label>
-              <Input id="name" type="text" placeholder="Alex Doe" required />
+              <Input id="name" type="text" placeholder="Alex Doe" value={name} onChange={e => setName(e.target.value)} required />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" placeholder="m@example.com" required />
+              <Input id="email" type="email" placeholder="m@example.com" value={email} onChange={e => setEmail(e.target.value)} required />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" required />
+              <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
             </div>
           </CardContent>
           <CardFooter className="flex flex-col items-stretch">
-            <Button className="w-full" type="submit">
-                Create Account
+            <Button className="w-full" type="submit" disabled={loading}>
+                {loading ? "Creating account..." : "Create Account"}
             </Button>
             <p className="mt-4 text-xs text-center text-muted-foreground">
               Already have an account?{" "}

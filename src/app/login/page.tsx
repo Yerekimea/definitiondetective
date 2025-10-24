@@ -7,12 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { LogIn } from "lucide-react";
 
 export default function LoginPage() {
   const { login, user, loading } = useAuth();
   const router = useRouter();
+  const [email, setEmail] = useState("alex.doe@example.com");
+  const [password, setPassword] = useState("password");
 
   useEffect(() => {
     if (user) {
@@ -20,9 +22,9 @@ export default function LoginPage() {
     }
   }, [user, router]);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    login();
+    await login(email, password);
   };
   
   if (loading || user) {
@@ -46,16 +48,16 @@ export default function LoginPage() {
           <CardContent className="grid gap-4">
             <div className="grid gap-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" placeholder="m@example.com" defaultValue="alex.doe@example.com" required />
+              <Input id="email" type="email" placeholder="m@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" defaultValue="password" required />
+              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
             </div>
           </CardContent>
           <CardFooter className="flex flex-col items-stretch">
-            <Button className="w-full" type="submit">
-                <LogIn className="mr-2 h-4 w-4"/> Sign in
+            <Button className="w-full" type="submit" disabled={loading}>
+                {loading ? 'Signing in...' : <><LogIn className="mr-2 h-4 w-4"/> Sign in</>}
             </Button>
             <p className="mt-4 text-xs text-center text-muted-foreground">
               Don&apos;t have an account?{" "}

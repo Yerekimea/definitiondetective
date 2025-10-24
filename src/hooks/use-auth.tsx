@@ -1,78 +1,107 @@
 "use client";
 
-import { useState, useEffect, createContext, useContext, useCallback } from 'react';
+import {
+  createContext,
+  useContext,
+  ReactNode,
+  useState,
+  useEffect,
+  useCallback,
+} from 'react';
+import {
+  getAuth,
+  onAuthStateChanged,
+  User,
+  signOut,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+} from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
+import { useFirebase } from '@/firebase';
 import { useRouter } from 'next/navigation';
 
-const mockUser = {
-  name: 'Alex Doe',
-  email: 'alex.doe@example.com',
-  score: 1250,
-  level: 15,
-};
-
-type AuthUser = typeof mockUser | null;
-
 interface AuthContextType {
-  user: AuthUser;
+  user: User | null;
   loading: boolean;
-  login: (redirect?: string) => void;
+  login: (email: string, pass: string) => Promise<void>;
+  signup: (email: string, pass: string, name: string) => Promise<void>;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<AuthUser>(null);
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const { auth, firestore } = useFirebase();
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    // Simulate checking auth status on mount
-    let authStatus: string | null = null;
-    try {
-      authStatus = sessionStorage.getItem('auth-status');
-    } catch (error) {
-      // sessionStorage is not available
-    }
-
-    if (authStatus === 'logged-in') {
-      setUser(mockUser);
-    }
-    setLoading(false);
-  }, []);
-
-  const login = useCallback((redirect: string = '/') => {
-    setLoading(true);
-    setTimeout(() => {
-      try {
-        sessionStorage.setItem('auth-status', 'logged-in');
-      } catch (error) {
-        // sessionStorage is not available
-      }
-      setUser(mockUser);
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
       setLoading(false);
-      router.push(redirect);
-    }, 500);
-  }, [router]);
+    });
+    return () => unsubscribe();
+  }, [auth]);
 
-  const logout = useCallback(() => {
-    try {
-      sessionStorage.removeItem('auth-status');
-    } catch (error) {
-        // sessionStorage is not available
-    }
-    setUser(null);
+  const login = useCallback(
+    async (email: string, pass: string) => {
+      setLoading(true);
+      try {
+        await signInWithEmailAndPassword(auth, email, pass);
+        router.push('/');
+      } catch (error) {
+        console.error('Login failed:', error);
+        // Handle error, e.g., show a toast message
+      } finally {
+        setLoading(false);
+      }
+    },
+    [auth, router]
+  );
+
+  const signup = useCallback(
+    async (email: string, pass: string, name: string) => {
+      setLoading(true);
+      try {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
+        const newUser = userCredential.user;
+        
+        // Create user profile in Firestore
+        const userRef = doc(firestore, 'users', newUser.uid);
+        await setDoc(userRef, {
+          id: newUser.uid,
+          username: name,
+          email: newUser.email,
+          totalScore: 0,
+          highestLevel: 1,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+        
+        router.push('/');
+      } catch (error) {
+        console.error('Signup failed:', error);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [auth, firestore, router]
+  );
+
+  const logout = useCallback(async () => {
+    await signOut(auth);
     router.push('/login');
-  }, [router]);
+  }, [auth, router]);
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, signup, logout }}>
       {children}
     </AuthContext.Provider>
   );
-};
+}
 
-export const useAuth = () => {
+export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');

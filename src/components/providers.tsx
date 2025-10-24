@@ -1,8 +1,8 @@
 "use client";
 
 import type { FC, ReactNode } from "react";
-import { AuthProvider } from "@/hooks/use-auth";
 import { Toaster } from "@/components/ui/toaster";
+import { AuthProvider } from '@/hooks/use-auth';
 
 interface ProvidersProps {
   children: ReactNode;

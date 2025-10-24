@@ -1,21 +1,26 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useTransition } from "react";
-import { wordList, WordData, getWordByDifficulty, scrambleDefinition } from "@/lib/game-data";
+import { getWordByDifficulty, type WordData } from "@/lib/game-data";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Keyboard } from "@/components/game/keyboard";
-import { Lightbulb, RotateCw, CheckCircle, XCircle, Award, PartyPopper } from "lucide-react";
+import { Lightbulb, RotateCw, XCircle, Award, PartyPopper } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getHintAction } from "@/lib/actions";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/use-auth";
+import { useFirestore } from "@/firebase";
+import { doc, updateDoc } from "firebase/firestore";
 
 type GameState = "playing" | "won" | "lost";
 type Difficulty = "easy" | "medium" | "hard";
 const MAX_INCORRECT_TRIES = 6;
 
 export default function GameClient() {
+  const { user } = useAuth();
+  const firestore = useFirestore();
   const [gameState, setGameState] = useState<GameState>("playing");
   const [wordData, setWordData] = useState<WordData | null>(null);
   const [definition, setDefinition] = useState<string>("");
@@ -95,18 +100,32 @@ export default function GameClient() {
     });
   }, [wordData, guessedLetters.correct, hint]);
 
+  const updateFirestoreUser = async (newScore: number, newLevel: number) => {
+    if (user) {
+      const userRef = doc(firestore, "users", user.uid);
+      await updateDoc(userRef, {
+        totalScore: newScore,
+        highestLevel: newLevel,
+        updatedAt: new Date().toISOString(),
+      });
+    }
+  };
+
   useEffect(() => {
     if (!wordData) return;
     const isWon = wordData.word.split('').every(char => guessedLetters.correct.includes(char.toLowerCase()));
     if (isWon) {
       setGameState("won");
       const difficulty = getDifficultyForLevel(level);
-      setScore(s => s + (difficulty === 'easy' ? 10 : difficulty === 'medium' ? 20 : 30));
-      setTimeout(() => setLevel(l => l + 1), 2000);
+      const newScore = score + (difficulty === 'easy' ? 10 : difficulty === 'medium' ? 20 : 30);
+      const newLevel = level + 1;
+      setScore(newScore);
+      updateFirestoreUser(newScore, newLevel);
+      setTimeout(() => setLevel(newLevel), 2000);
     } else if (guessedLetters.incorrect.length >= MAX_INCORRECT_TRIES) {
       setGameState("lost");
     }
-  }, [guessedLetters, wordData, level]);
+  }, [guessedLetters, wordData, level, score, user]);
 
 
   const incorrectTriesLeft = MAX_INCORRECT_TRIES - guessedLetters.incorrect.length;
@@ -160,11 +179,12 @@ export default function GameClient() {
       ) : (
         <>
           <div className="flex justify-center">
-            <Button onClick={handleHintRequest} disabled={isHintLoading}>
+            <Button onClick={handleHintRequest} disabled={isHintLoading || !user}>
               <Lightbulb className={cn("mr-2 h-4 w-4", isHintLoading && "animate-spin")} />
               {isHintLoading ? 'Getting Hint...' : 'Get a Hint (-5 score)'}
             </Button>
           </div>
+          {!user && <p className="text-center text-destructive text-sm">Please log in to use hints and save progress.</p>}
           <p className="text-center text-muted-foreground">Incorrect Guesses: {guessedLetters.incorrect.join(', ').toUpperCase()} ({incorrectTriesLeft} left)</p>
           <Keyboard onKeyClick={handleGuess} guessedLetters={guessedLetters} />
         </>

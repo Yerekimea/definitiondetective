@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import Providers from '@/components/providers';
 import Header from '@/components/header';
+import { FirebaseClientProvider } from '@/firebase/client-provider';
 
 export const metadata: Metadata = {
   title: 'Definition Detective',
@@ -21,12 +22,14 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased bg-background text-foreground">
-        <Providers>
-          <div className="relative flex min-h-screen w-full flex-col">
-            <Header />
-            <main className="flex-1">{children}</main>
-          </div>
-        </Providers>
+        <FirebaseClientProvider>
+          <Providers>
+            <div className="relative flex min-h-screen w-full flex-col">
+              <Header />
+              <main className="flex-1">{children}</main>
+            </div>
+          </Providers>
+        </FirebaseClientProvider>
       </body>
     </html>
   );
