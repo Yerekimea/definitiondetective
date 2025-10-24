@@ -1,22 +1,19 @@
 /**
- * @fileoverview Firestore Security Rules for Definition Detective.
+ * @file Firebase Security Rules for Definition Detective.
  *
- * Core Philosophy: This ruleset enforces a strict user-ownership model for user profiles and game sessions.
- * Leaderboard entries are publicly readable but only writable by authenticated users.
+ * @description This ruleset enforces a strict user-ownership model for user profiles and game sessions,
+ *              while allowing public read access to leaderboard entries with authenticated-user-only writes.
  *
- * Data Structure:
- * - /userProfiles/{userId}: Stores user profile data, accessible only to the user themselves.
- * - /userProfiles/{userId}/gameSessions/{gameSessionId}: Stores game session data, accessible only to the owning user.
- * - /leaderboardEntries/{leaderboardEntryId}: Stores leaderboard entries, publicly readable, but writable only by authenticated users.
+ * @dataStructure
+ *  - /userProfiles/{userId}: Stores user profile data, accessible only to the user.
+ *  - /userProfiles/{userId}/gameSessions/{gameSessionId}: Stores game session data, accessible only to the owning user.
+ *  - /leaderboardEntries/{leaderboardEntryId}: Stores leaderboard entries, publicly readable, writable only by authenticated users.
  *
- * Key Security Decisions:
- * - Users can only read and write their own user profiles and game sessions.
- * - Leaderboard entries are publicly readable to encourage competition.
- * - The rules explicitly deny any listing of user profiles to protect user privacy.
- *
- * Denormalization for Authorization:  The `userProfileId` field in `GameSession` and `LeaderboardEntry` documents is not strictly necessary given the Firestore path. However, it is helpful to have this data available on the documents themselves to enable more advanced query patterns.
- *
- * Structural Segregation: User-specific data (profiles, game sessions) is stored under the /users/{userId} path, while public data (leaderboard) resides in a separate top-level collection.
+ * @keySecurityDecisions
+ *  - User profiles and game sessions are strictly owned by the user identified in the path.
+ *  - Listing of user profiles is disallowed to prevent unauthorized data access.
+ *  - Leaderboard entries are publicly readable, but only authenticated users can create, update, or delete entries.
+ *  - Increment operations in update requests are not specifically validated.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -25,109 +22,110 @@ service cloud.firestore {
     /**
      * @description Controls access to user profile documents.
      * @path /userProfiles/{userProfileId}
-     * @allow (create) - User with UID 'user123' can create their profile if userProfileId == 'user123'.
-     * @allow (get, update, delete) - User with UID 'user123' can read/update/delete their profile if userProfileId == 'user123'.
-     * @deny (create, update, delete) - User with UID 'user456' cannot create/update/delete profile with userProfileId == 'user123'.
-     * @deny (list) - No one can list user profiles.
-     * @principle Enforces document ownership for user profiles and prevents unauthorized listing.
+     * @allow (create) Signed-in user can create their own profile.
+     * @allow (get, update, delete) Signed-in user can get, update, or delete their own profile.
+     * @deny (create) A user cannot create a profile with an ID that doesn't match their own.
+     * @deny (get, update, delete) A user cannot get, update, or delete another user's profile.
+     * @principle Enforces document ownership for writes.
      */
     match /userProfiles/{userProfileId} {
-      // Helper function to check if the request is made by the owner of the user profile.
-      function isOwner(userId) {
-        return request.auth != null && request.auth.uid == userId;
+      // Helper function to check if the user is signed in
+      function isSignedIn() {
+        return request.auth != null;
       }
 
-      // Helper function to check if the user profile exists and the request is made by the owner.
-      function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
+      // Helper function to check if the user is the owner of the document
+      function isOwner(userProfileId) {
+        return request.auth.uid == userProfileId;
       }
 
-      // Allow the user to create their own profile, enforcing that the userProfileId matches their UID.
-      allow create: if isOwner(userProfileId) && request.resource.data.id == userProfileId;
+      // Helper function to check if the user is the owner of the EXISTING document
+      function isExistingOwner(userProfileId) {
+        return isOwner(userProfileId) && resource != null;
+      }
 
-      // Allow the user to read their own profile.
+      // Allow the user to read their own profile
       allow get: if isOwner(userProfileId);
-
-      // Deny listing user profiles.
+      // Prevent listing of user profiles
       allow list: if false;
 
-      // Allow the user to update their own profile. Enforce immutability of the `id` field
-      allow update: if isExistingOwner(userProfileId) && request.resource.data.id == resource.data.id;
+      // Allow the user to create their own profile, validating the ID matches their auth UID
+      allow create: if isSignedIn() && isOwner(userProfileId) && request.resource.data.id == request.auth.uid;
 
-      // Allow the user to delete their own profile.
+      // Allow the user to update their own profile
+      allow update: if isExistingOwner(userProfileId) && resource.data.id == userProfileId;
+
+      // Allow the user to delete their own profile
       allow delete: if isExistingOwner(userProfileId);
     }
 
     /**
      * @description Controls access to game session documents within a user profile.
      * @path /userProfiles/{userProfileId}/gameSessions/{gameSessionId}
-     * @allow (create) - User with UID 'user123' can create a game session under their profile.
-     * @allow (get, update, delete) - User with UID 'user123' can read/update/delete game sessions under their profile.
-     * @deny (create, update, delete) - User with UID 'user456' cannot create/update/delete game sessions under userProfile 'user123'.
-     * @principle Enforces document ownership for game sessions and prevents unauthorized listing.
+     * @allow (create) Signed-in user can create a game session under their profile.
+     * @allow (get, update, delete) Signed-in user can get, update, or delete game sessions under their profile.
+     * @deny (create) A user cannot create a game session under another user's profile.
+     * @deny (get, update, delete) A user cannot get, update, or delete game sessions under another user's profile.
+     * @principle Enforces document ownership for writes.
      */
     match /userProfiles/{userProfileId}/gameSessions/{gameSessionId} {
-      // Helper function to check if the request is made by the owner of the user profile.
-      function isOwner(userId) {
-        return request.auth != null && request.auth.uid == userId;
-      }
-
-      // Helper function to check if the user profile exists and the request is made by the owner.
-      function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
-      }
-
-      // Allow the user to create a game session under their profile.
-      allow create: if isOwner(userProfileId);
-
-      // Allow the user to read a game session under their profile.
-      allow get: if isOwner(userProfileId);
-
-      // Allow the user to list game sessions under their profile.
-      allow list: if isOwner(userProfileId);
-
-      // Allow the user to update a game session under their profile.
-      allow update: if isExistingOwner(userProfileId);
-
-      // Allow the user to delete a game session under their profile.
-      allow delete: if isExistingOwner(userProfileId);
-    }
-
-    /**
-     * @description Controls access to leaderboard entries.
-     * @path /leaderboardEntries/{leaderboardEntryId}
-     * @allow (get, list) - Anyone can read leaderboard entries.
-     * @allow (create) - Authenticated users can create leaderboard entries.
-     * @deny (update, delete) - Only the creator of the entry can update/delete it.
-     * @principle Allows public read access to leaderboard entries but restricts write access to authenticated users and owners.
-     */
-    match /leaderboardEntries/{leaderboardEntryId} {
-      // Helper function to check if the user is signed in
+       // Helper function to check if the user is signed in
       function isSignedIn() {
         return request.auth != null;
       }
 
-      // Helper function to check if the request is made by the owner of the leaderboard entry.
-      function isOwner(userId) {
-        return request.auth != null && request.auth.uid == userId;
+      // Helper function to check if the user is the owner of the document
+      function isOwner(userProfileId) {
+        return request.auth.uid == userProfileId;
       }
 
-      // Helper function to check if the leaderboard entry exists and the request is made by the owner.
-      function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
+      // Helper function to check if the user is the owner of the EXISTING document
+      function isExistingOwner(userProfileId) {
+        return isOwner(userProfileId) && resource != null;
       }
 
-      // Allow anyone to read leaderboard entries.
+      // Allow the user to read their own game sessions
+      allow get: if isOwner(userProfileId);
+
+      // Allow the user to list their own game sessions
+      allow list: if isOwner(userProfileId);
+
+      // Allow the user to create a game session under their profile
+      allow create: if isSignedIn() && isOwner(userProfileId) && request.resource.data.userProfileId == userProfileId;
+
+      // Allow the user to update their own game sessions
+      allow update: if isExistingOwner(userProfileId) && resource.data.userProfileId == userProfileId;
+
+      // Allow the user to delete their own game sessions
+      allow delete: if isExistingOwner(userProfileId);
+    }
+
+    /**
+     * @description Controls access to leaderboard entry documents.
+     * @path /leaderboardEntries/{leaderboardEntryId}
+     * @allow (get, list) Anyone can read leaderboard entries.
+     * @allow (create, update, delete) Only signed-in users can create, update, or delete leaderboard entries.
+     * @deny (create) Not signed-in user cannot create leaderboard entries.
+     * @deny (update, delete) Not signed-in user cannot update or delete leaderboard entries.
+     * @principle Allows public read access but restricts write access to authenticated users.
+     */
+    match /leaderboardEntries/{leaderboardEntryId} {
+       // Helper function to check if the user is signed in
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      // Allow anyone to read leaderboard entries
       allow get, list: if true;
 
-      // Allow authenticated users to create leaderboard entries.
-      allow create: if isSignedIn();
+      // Allow signed-in users to create leaderboard entries
+      allow create: if isSignedIn() && request.resource.data.userProfileId == request.auth.uid;
 
-      // Allow the owner to update their own leaderboard entry.
-      allow update: if isExistingOwner(resource.data.userProfileId);
+      // Allow signed-in users to update leaderboard entries
+      allow update: if isSignedIn() && resource != null;
 
-      // Allow the owner to delete their own leaderboard entry.
-      allow delete: if isExistingOwner(resource.data.userProfileId);
+      // Allow signed-in users to delete leaderboard entries
+      allow delete: if isSignedIn() && resource != null;
     }
   }
 }
