@@ -2,8 +2,8 @@
 
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { getAuth, connectAuthEmulator } from 'firebase/auth';
-import { getFirestore, connectFirestoreEmulator, terminate } from 'firebase/firestore'
+import { getAuth } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
 
 // IMPORTANT: DO NOT MODIFY THIS FUNCTION
 export function initializeFirebase() {
@@ -35,18 +35,6 @@ export function initializeFirebase() {
 export function getSdks(firebaseApp: FirebaseApp) {
   const firestore = getFirestore(firebaseApp);
   const auth = getAuth(firebaseApp);
-
-  if (process.env.NODE_ENV !== 'production') {
-    // This is a workaround to prevent the SDK from trying to connect to the emulator.
-    // by connecting to a non-existent emulator we can force
-    // the SDK to use the production services.
-    try {
-      connectFirestoreEmulator(firestore, 'localhost', 8081); // Use a non-standard port
-      connectAuthEmulator(auth, 'http://localhost:9098'); // Use a non-standard port
-    } catch (e) {
-      // It's okay if this fails, it means it's already connected or this is not the first run.
-    }
-  }
 
   return {
     firebaseApp,
