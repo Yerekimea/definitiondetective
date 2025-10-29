@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getHintAction, getSoundAction } from "@/lib/actions";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/hooks/use-auth.tsx";
 import { useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import { doc, updateDoc, increment, getDoc } from "firebase/firestore";
 import { useSound } from "@/hooks/use-sound";
@@ -26,7 +26,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Progress } from "@/components/ui/progress";
-import { Facebook, Twitter } from "lucide-react";
+import ShareButton from "./share-button";
+
 
 type GameState = "playing" | "won" | "lost";
 type Difficulty = "easy" | "medium" | "hard";
@@ -34,37 +35,6 @@ const MAX_INCORRECT_TRIES = 6;
 
 type SoundMap = {
   [key: string]: string | null;
-}
-
-const ShareButton = ({ platform, text, url }: { platform: 'whatsapp' | 'facebook' | 'x', text: string, url: string }) => {
-  const platforms = {
-    whatsapp: {
-      url: `https://api.whatsapp.com/send?text=${encodeURIComponent(text + ' ' + url)}`,
-      icon: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>,
-      label: "WhatsApp"
-    },
-    facebook: {
-      url: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(text)}`,
-      icon: <Facebook className="h-4 w-4" />,
-      label: "Facebook"
-    },
-    x: {
-      url: `https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`,
-      icon: <Twitter className="h-4 w-4" />,
-      label: "X"
-    }
-  }
-
-  const handleShare = () => {
-    window.open(platforms[platform].url, '_blank');
-  }
-
-  return (
-    <Button onClick={handleShare} variant="outline" size="sm">
-      {platforms[platform].icon}
-      <span className="ml-2">{platforms[platform].label}</span>
-    </Button>
-  )
 }
 
 export default function GameClient() {
@@ -81,7 +51,6 @@ export default function GameClient() {
   const [isHintLoading, startHintTransition] = useTransition();
   const [isWatchingAd, setIsWatchingAd] = useState(false);
   const [adProgress, setAdProgress] = useState(0);
-  const [appUrl, setAppUrl] = useState("");
 
   const [sounds, setSounds] = useState<SoundMap>({});
   const { playSound } = useSound();
@@ -90,12 +59,6 @@ export default function GameClient() {
     user ? doc(firestore, "userProfiles", user.uid) : null
   , [firestore, user]);
   const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      setAppUrl(window.location.origin);
-    }
-  }, []);
   
   useEffect(() => {
     if(userProfile) {
@@ -370,9 +333,9 @@ export default function GameClient() {
       <div className="mt-12 pt-8 border-t border-dashed">
         <p className="text-sm font-medium flex items-center justify-center gap-2 mb-4 text-muted-foreground"><Share className="h-4 w-4" /> Share The Game!</p>
         <div className="flex justify-center gap-2">
-          <ShareButton platform="whatsapp" text={shareText} url={appUrl} />
-          <ShareButton platform="facebook" text={shareText} url={appUrl} />
-          <ShareButton platform="x" text={shareText} url={appUrl} />
+          <ShareButton platform="whatsapp" text={shareText} />
+          <ShareButton platform="facebook" text={shareText} />
+          <ShareButton platform="x" text={shareText} />
         </div>
       </div>
 
