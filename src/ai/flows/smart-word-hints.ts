@@ -56,7 +56,8 @@ const smartHintFlow = ai.defineFlow(
     outputSchema: SmartHintOutputSchema,
   },
   async input => {
-    const {output} = await smartHintPrompt(input);
+    const response = await smartHintPrompt(input);
+    const output = response.output;
     return {
       hint: output?.hint ?? '',
     };
