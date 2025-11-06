@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { getSmartHint } from '@/ai/flows/smart-word-hints';
 
 async function testSmartHint() {
