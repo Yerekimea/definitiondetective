@@ -74,7 +74,7 @@ const gameSoundFlow = ai.defineFlow(
           },
         },
       },
-      prompt: `Generate an audio sound effect for the word: ${query}`,
+      prompt: query,
     });
     if (!media) {
       throw new Error('no media returned');
