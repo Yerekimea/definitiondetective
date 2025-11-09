@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -10,7 +11,7 @@ const ShareButton = ({ platform, text }: { platform: 'whatsapp' | 'facebook' | '
     useEffect(() => {
         // This code will only run on the client, after the component has mounted.
         if (typeof window !== "undefined") {
-            setAppUrl(window.location.origin);
+            setAppUrl(window.location.href);
         }
     }, []); // The empty dependency array ensures this runs only once.
 
