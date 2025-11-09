@@ -21,7 +21,7 @@ service cloud.firestore {
     // User Profiles
     match /userProfiles/{userId} {
       // Anyone can read a user profile (for leaderboards)
-      allow get: if isSignedIn();
+      allow get, list: if isSignedIn();
       
       // Only the owner can create their own profile
       allow create: if isOwner(userId)
@@ -37,7 +37,6 @@ service cloud.firestore {
                       (request.resource.data.keys().hasAll(['totalScore', 'highestLevel', 'rank', 'updatedAt'])
                         && request.resource.data.totalScore > resource.data.totalScore
                         && request.resource.data.totalScore <= resource.data.totalScore + 30 // Max score per round is 30
-                        && request.resource.data.highestLevel >= resource.data.highestLevel
                       ) ||
                       // Allow hint purchase/usage
                       (request.resource.data.keys().hasAll(['hints', 'updatedAt']) &&
