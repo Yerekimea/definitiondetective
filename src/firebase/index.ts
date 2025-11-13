@@ -12,13 +12,13 @@ export function initializeFirebase() {
   }
 
   let firebaseApp;
-  // In a deployed Firebase App Hosting environment, the SDK is automatically configured.
-  // In a local environment, we use the firebaseConfig object.
-  // The NEXT_PUBLIC_USE_FIREBASE_EMULATOR is set by the development environment.
-  if (process.env.NODE_ENV === 'production') {
-      firebaseApp = initializeApp({});
+  // In a deployed Firebase App Hosting environment, the SDK is automatically configured
+  // by the presence of the FIREBASE_CONFIG env var.
+  // In a local environment, we use the firebaseConfig object from the .env file.
+  if (process.env.FIREBASE_CONFIG) {
+    firebaseApp = initializeApp({});
   } else {
-      firebaseApp = initializeApp(firebaseConfig);
+    firebaseApp = initializeApp(firebaseConfig);
   }
 
   return getSdks(firebaseApp);
