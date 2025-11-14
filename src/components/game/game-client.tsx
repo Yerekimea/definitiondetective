@@ -4,14 +4,13 @@
 import { useState, useEffect, useCallback, useMemo, useTransition } from "react";
 import { getWordByDifficulty, type WordData, getRankForScore } from "@/lib/game-data";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Keyboard } from "@/components/game/keyboard";
 import { Lightbulb, RotateCw, XCircle, Award, PartyPopper, Clapperboard, Share } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useHintAction } from "@/lib/actions";
 import { requestSmartHint } from "@/lib/api/hints";
-import { requestGameSound } from "@/lib/api/sounds";
-import { useSound } from "@/hooks/use-sound";
+import { useGameSounds } from "@/hooks/use-game-sounds";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth.tsx";
@@ -50,7 +49,7 @@ export default function GameClient() {
   const [isWatchingAd, setIsWatchingAd] = useState(false);
   const [adProgress, setAdProgress] = useState(0);
 
-  const { playSound: playSoundFromUrl } = useSound();
+  const { playSound } = useGameSounds();
 
   const userProfileRef = useMemoFirebase(() => 
     user ? doc(firestore, "userProfiles", user.uid) : null
@@ -66,17 +65,6 @@ export default function GameClient() {
 
   const { toast } = useToast();
   
-  const playSound = useCallback(async (soundType: 'correct' | 'incorrect' | 'win' | 'hint' | 'click') => {
-    try {
-      const sound = await requestGameSound(soundType);
-      if(sound?.media) {
-        playSoundFromUrl(sound.media);
-      }
-    } catch(e) {
-      console.error("Failed to play sound", e)
-    }
-  }, [playSoundFromUrl])
-
   const getDifficultyForLevel = (level: number): Difficulty => {
     if (level <= 5) return 'easy';
     if (level <= 10) return 'medium';

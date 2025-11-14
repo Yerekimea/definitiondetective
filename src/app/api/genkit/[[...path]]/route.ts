@@ -1,7 +1,6 @@
 import { genkit } from 'genkit';
 import { NextRequest, NextResponse } from 'next/server';
 import '@/ai/flows/smart-word-hints';
-import '@/ai/flows/game-sounds-flow';
 
 export async function POST(request: NextRequest) {
   try {
