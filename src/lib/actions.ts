@@ -1,7 +1,7 @@
 
 'use server';
 
-import { initializeApp, getApps, App, cert } from 'firebase-admin/app';
+import { initializeApp, getApps, App } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { genkit } from 'genkit';
 import { googleAI } from '@genkit-ai/google-genai';
@@ -70,6 +70,9 @@ export async function useHintAction(data: {
         }
     }
 
+    const hintSchema = z.object({
+        hint: z.string(),
+    });
 
     const hintResponse = await ai.generate({
         model: googleAI.model('gemini-1.5-flash'),
@@ -78,7 +81,7 @@ export async function useHintAction(data: {
             The user gives you a secret word, a string of letters they have already guessed incorrectly, and a number of letters to reveal.
 
             Rules:
-            1.  Your response MUST be a JSON object with a single key: "hint".
+            1.  Your response MUST be a JSON object that adheres to this schema: { "hint": "string" }.
             2.  The value of "hint" should be a string representing the secret word.
             3.  In this string, exactly ${data.lettersToReveal} letters of the secret word should be revealed.
             4.  All other letters MUST be represented by an underscore "_".
@@ -91,18 +94,20 @@ export async function useHintAction(data: {
 
             Produce the JSON response now.
         `,
-        output: {
-            schema: z.object({
-                hint: z.string(),
-            }),
-            format: 'json',
+        config: {
+            generation_config: {
+                response_mime_type: 'application/json',
+            },
         },
     });
     
     const hintOutput = hintResponse.output;
 
-    if (hintOutput?.hint) {
-      return { success: true, hint: hintOutput.hint };
+    if (hintOutput) {
+        const parsed = hintSchema.safeParse(hintOutput);
+        if (parsed.success) {
+            return { success: true, hint: parsed.data.hint };
+        }
     }
     
     throw new Error('AI did not return a valid hint format.');
