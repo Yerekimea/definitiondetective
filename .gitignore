@@ -37,8 +37,11 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# genkit
 .genkit/*
 .env*
+!.env.example
+
 
 # firebase
 firebase-debug.log
