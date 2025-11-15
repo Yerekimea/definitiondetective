@@ -182,7 +182,7 @@ export default function GameClient() {
       const lettersToRevealCount = revealedByHint.length + 2;
       const { hint: newHint, error } = await getHintAction({
         word: wordData.word,
-        incorrectGuesses: guessedLetters.incorrect.join(''),
+        incorrectGuesses: guessedLetters.incorrect,
         lettersToReveal: lettersToRevealCount,
       });
 

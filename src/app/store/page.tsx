@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useAuth } from "@/hooks/use-auth.tsx";
+import { useAuth } from "@/hooks/use-auth";
 import { useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import { doc, updateDoc, arrayUnion, increment } from "firebase/firestore";
 import type { UserProfile } from "@/lib/firebase-types";

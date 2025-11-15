@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useAuth } from "@/hooks/use-auth.tsx";
+import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";

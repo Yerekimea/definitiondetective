@@ -1,4 +1,4 @@
-import {createApiHandler} from '@genkit-ai/next';
+import createApiHandler from '@genkit-ai/next';
 import '@/ai/flows/smart-word-hints';
 import '@/ai/flows/game-sounds-flow';
 
