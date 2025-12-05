@@ -2,48 +2,27 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+
+const String API_BASE_URL = 'http://10.0.2.2:9002';
 
 Future<void> main() async {
-  // Ensure Flutter engine bindings are ready
   WidgetsFlutterBinding.ensureInitialized();
 
-  String debugInfo = '';
-
   try {
-    // Load environment variables from .env file
-    // In main.dart, temporarily change this line:
-await dotenv.load(fileName: "/workspaces/definitiondetective/app/.env");
-    //await dotenv.load(fileName: ".env");
-    debugInfo += '✅ .env file loaded\n';
-    
-    // Check if API key exists
-    final apiKey = dotenv.env['GEMINI_API_KEY'];
-    if (apiKey == null) {
-      debugInfo += '❌ GEMINI_API_KEY is NULL\n';
-    } else if (apiKey.isEmpty) {
-      debugInfo += '❌ GEMINI_API_KEY is EMPTY\n';
-    } else {
-      debugInfo += '✅ GEMINI_API_KEY loaded: ${apiKey.substring(0, 5)}...\n';
-    }
-
-    // Initialize Firebase with platform-specific options
+    await dotenv.load();
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-    debugInfo += '✅ Firebase initialized successfully\n';
-
-    runApp(MyApp(debugInfo: debugInfo));
-    
-  } catch (e, stackTrace) {
-    debugInfo += '❌ ERROR in main(): $e\n';
-    runApp(MyApp(debugInfo: debugInfo));
+    runApp(const MyApp());
+  } catch (e) {
+    runApp(const MyApp());
   }
 }
 
 class MyApp extends StatelessWidget {
-  final String debugInfo;
-  
-  const MyApp({super.key, required this.debugInfo});
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -53,158 +32,286 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
         useMaterial3: true,
       ),
-      home: HomeScreen(debugInfo: debugInfo),
+      home: const HomeScreen(),
     );
   }
 }
 
 class HomeScreen extends StatefulWidget {
-  final String debugInfo;
-  
-  const HomeScreen({super.key, required this.debugInfo});
+  const HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  String? geminiKey;
-  bool _isLoading = true;
+  int score = 0;
+  int level = 1;
+  List<String> guessedLetters = [];
 
-  @override
-  void initState() {
-    super.initState();
-    _loadConfig();
-  }
-
-  void _loadConfig() {
-    // Retrieve your secret key from .env
-    final key = dotenv.env['GEMINI_API_KEY'];
-    
+  void _startGame() {
     setState(() {
-      geminiKey = key;
-      _isLoading = false;
+      guessedLetters = [];
     });
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => const GameScreen()),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Definition Detective - DEBUG'),
+        title: const Text('Definition Detective'),
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        centerTitle: true,
+      ),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.psychology,
+                size: 80,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Definition Detective',
+                style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Guess the word from its definition!',
+                style: Theme.of(context).textTheme.bodyLarge,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 48),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    children: [
+                      Text(
+                        'Your Stats',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      const SizedBox(height: 16),
+                      _buildStatRow('Score:', '$score'),
+                      _buildStatRow('Level:', '$level'),
+                      const SizedBox(height: 16),
+                      ElevatedButton.icon(
+                        onPressed: _startGame,
+                        icon: const Icon(Icons.play_arrow),
+                        label: const Text('Play Game'),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 32,
+                            vertical: 16,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              TextButton.icon(
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Leaderboard coming soon!')),
+                  );
+                },
+                icon: const Icon(Icons.leaderboard),
+                label: const Text('View Leaderboard'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(fontWeight: FontWeight.w500),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class GameScreen extends StatefulWidget {
+  const GameScreen({super.key});
+
+  @override
+  State<GameScreen> createState() => _GameScreenState();
+}
+
+class _GameScreenState extends State<GameScreen> {
+  final List<String> words = ['example', 'flutter', 'definition', 'detective'];
+  late String currentWord;
+  late String definition;
+  List<String> guessedLetters = [];
+  bool gameOver = false;
+  bool won = false;
+  bool loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeGame();
+  }
+
+  void _initializeGame() {
+    currentWord = (words..shuffle()).first;
+    definition = 'A word puzzle game where you guess letters.'; // Placeholder
+    guessedLetters = [];
+    gameOver = false;
+    won = false;
+  }
+
+  void _guessLetter(String letter) {
+    if (guessedLetters.contains(letter) || gameOver) return;
+
+    setState(() {
+      guessedLetters.add(letter);
+      _checkWin();
+    });
+  }
+
+  void _checkWin() {
+    final allLettersGuessed = currentWord
+        .split('')
+        .every((letter) => guessedLetters.contains(letter.toLowerCase()));
+    if (allLettersGuessed) {
+      setState(() {
+        gameOver = true;
+        won = true;
+      });
+    } else if (guessedLetters.length >= 6) {
+      setState(() {
+        gameOver = true;
+        won = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final displayWord = currentWord
+        .split('')
+        .map((letter) => guessedLetters.contains(letter.toLowerCase()) ? letter : '_')
+        .join(' ');
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Game'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20.0),
+        padding: const EdgeInsets.all(16.0),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Status Icon
-            Icon(
-              _isLoading ? Icons.hourglass_empty : 
-                 geminiKey == null ? Icons.error_outline : Icons.check_circle,
-              color: _isLoading ? Colors.blue : 
-                     geminiKey == null ? Colors.orange : Colors.green,
-              size: 64,
-            ),
-            
-            SizedBox(height: 20),
-            
-            // Status Text
-            Text(
-              _isLoading ? 'Loading...' : 
-                 geminiKey == null ? 'Configuration Issue' : 'Ready!',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: _isLoading ? Colors.blue : 
-                       geminiKey == null ? Colors.orange : Colors.green,
-              ),
-            ),
-            
-            SizedBox(height: 20),
-            
-            // Debug Information Card
             Card(
-              elevation: 4,
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   children: [
                     Text(
-                      'Debug Information',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey[700],
-                      ),
+                      'Definition',
+                      style: Theme.of(context).textTheme.titleMedium,
                     ),
-                    SizedBox(height: 10),
-                    Divider(),
-                    SizedBox(height: 10),
-                    _buildInfoRow('App Status:', _isLoading ? 'Loading' : 'Ready'),
-                    _buildInfoRow('API Key Status:', geminiKey == null ? 'MISSING' : 'PRESENT'),
-                    SizedBox(height: 10),
+                    const SizedBox(height: 8),
                     Text(
-                      'Startup Log:',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    SizedBox(height: 5),
-                    Container(
-                      width: double.infinity,
-                      padding: EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        widget.debugInfo,
-                        style: TextStyle(
-                          fontFamily: 'monospace',
-                          fontSize: 12,
-                        ),
-                      ),
+                      definition,
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyLarge,
                     ),
                   ],
                 ),
               ),
             ),
-            
-            SizedBox(height: 20),
-            
-            // Help Text if API Key is Missing
-            if (!_isLoading && geminiKey == null)
+            const SizedBox(height: 24),
+            Text(
+              displayWord,
+              style: const TextStyle(
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 4,
+              ),
+            ),
+            const SizedBox(height: 24),
+            if (gameOver)
               Card(
-                color: Colors.orange[50],
+                color: won ? Colors.green[50] : Colors.red[50],
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
                     children: [
                       Text(
-                        'Configuration Issue Detected',
+                        won ? 'You Won!' : 'Game Over',
                         style: TextStyle(
+                          fontSize: 24,
                           fontWeight: FontWeight.bold,
-                          color: Colors.orange[800],
+                          color: won ? Colors.green : Colors.red,
                         ),
                       ),
-                      SizedBox(height: 10),
+                      const SizedBox(height: 8),
                       Text(
-                        'The .env file was found but GEMINI_API_KEY is missing or empty.',
+                        won ? 'The word was: $currentWord' : 'The word was: $currentWord',
                         textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.orange[800]),
                       ),
-                      SizedBox(height: 10),
-                      Text(
-                        'Please check:',
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () {
+                          setState(_initializeGame);
+                        },
+                        child: const Text('Play Again'),
                       ),
-                      SizedBox(height: 5),
-                      Text('1. .env file exists in project root'),
-                      Text('2. Contains: GEMINI_API_KEY=your_key'),
-                      Text('3. No quotes or spaces around the value'),
+                      const SizedBox(height: 8),
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('Back Home'),
+                      ),
                     ],
                   ),
                 ),
+              )
+            else
+              Column(
+                children: [
+                  Wrap(
+                    spacing: 8,
+                    children: 'abcdefghijklmnopqrstuvwxyz'
+                        .split('')
+                        .map((letter) => _buildLetterButton(letter))
+                        .toList(),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Incorrect: ${guessedLetters.where((l) => !currentWord.contains(l)).join(', ')}',
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                ],
               ),
           ],
         ),
@@ -212,23 +319,30 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        children: [
-          Text(
-            label,
-            style: TextStyle(fontWeight: FontWeight.bold),
+  Widget _buildLetterButton(String letter) {
+    final isGuessed = guessedLetters.contains(letter);
+    final isCorrect = currentWord.contains(letter);
+
+    return SizedBox(
+      width: 36,
+      height: 36,
+      child: ElevatedButton(
+        onPressed: isGuessed || gameOver ? null : () => _guessLetter(letter),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: isGuessed
+              ? (isCorrect ? Colors.green : Colors.red)
+              : Colors.grey[300],
+          disabledBackgroundColor: isGuessed
+              ? (isCorrect ? Colors.green : Colors.red)
+              : Colors.grey[300],
+          padding: EdgeInsets.zero,
+        ),
+        child: Text(
+          letter.toUpperCase(),
+          style: TextStyle(
+            color: isGuessed ? Colors.white : Colors.black,
           ),
-          SizedBox(width: 10),
-          Text(
-            value,
-            style: TextStyle(
-              color: value == 'MISSING' ? Colors.red : Colors.grey[700],
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

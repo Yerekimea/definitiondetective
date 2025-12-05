@@ -8,7 +8,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Keyboard } from "@/components/game/keyboard";
 import { Lightbulb, RotateCw, XCircle, Award, PartyPopper, Clapperboard, Share } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { getHintAction, getSoundAction } from "@/lib/actions";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
@@ -107,14 +106,22 @@ export default function GameClient() {
   useEffect(() => {
     const fetchSounds = async () => {
       const soundKeys = ['correct', 'incorrect', 'win'];
-      const soundPromises = soundKeys.map(key => getSoundAction(key));
-      const results = await Promise.all(soundPromises);
       const newSounds: SoundMap = {};
-      results.forEach((result, index) => {
-        if (result.soundDataUri) {
-          newSounds[soundKeys[index]] = result.soundDataUri;
+      await Promise.all(soundKeys.map(async (key) => {
+        try {
+          const res = await fetch('/api/sound', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sound: key }),
+          });
+          const json = await res.json();
+          if (json && json.soundDataUri) {
+            newSounds[key] = json.soundDataUri;
+          }
+        } catch (err) {
+          console.error('Error fetching sound', key, err);
         }
-      });
+      }));
       setSounds(newSounds);
     };
     fetchSounds();
@@ -180,11 +187,16 @@ export default function GameClient() {
 
     startHintTransition(async () => {
       const lettersToRevealCount = revealedByHint.length + 2;
-      const { hint: newHint, error } = await getHintAction({
-        word: wordData.word,
-        incorrectGuesses: guessedLetters.incorrect,
-        lettersToReveal: lettersToRevealCount,
+      const res = await fetch('/api/hint', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          word: wordData.word,
+          incorrectGuesses: guessedLetters.incorrect,
+          lettersToReveal: lettersToRevealCount,
+        }),
       });
+      const { hint: newHint, error } = await res.json();
 
       if (error) {
         toast({
