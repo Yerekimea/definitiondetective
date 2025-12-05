@@ -1,0 +1,53 @@
+name: Build Android (Flutter)
+
+on:
+  push:
+    branches: [ main, 'fix/**', 'feat/**', '**' ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 'stable'
+
+      - name: Install Android tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libglu1-mesa
+
+      - name: Flutter pub get
+        run: flutter pub get
+        working-directory: app
+
+      - name: Build APK (release)
+        run: flutter build apk --release
+        working-directory: app
+
+      - name: Build AAB (release)
+        run: flutter build appbundle --release
+        working-directory: app
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: app/build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Upload AAB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-aab
+          path: app/build/app/outputs/bundle/release/app-release.aab

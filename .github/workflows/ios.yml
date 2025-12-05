@@ -1,0 +1,37 @@
+name: Build iOS (Flutter)
+
+on:
+  push:
+    branches: [ main, 'fix/**', 'feat/**', '**' ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 'stable'
+
+      - name: Install CocoaPods
+        run: sudo gem install cocoapods
+
+      - name: Flutter pub get
+        run: flutter pub get
+        working-directory: app
+
+      - name: Build IPA (no codesign)
+        run: flutter build ipa --no-codesign --export-method ad-hoc
+        working-directory: app
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-ipa
+          path: app/build/ios/ipa
+
+    # Note: Producing a signed .ipa requires provisioning profiles and secrets (not included here).
