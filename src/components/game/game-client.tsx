@@ -109,6 +109,18 @@ export default function GameClient() {
       const newSounds: SoundMap = {};
       await Promise.all(soundKeys.map(async (key) => {
         try {
+          // Prefer a static public asset if it exists (fast, cacheable).
+          const staticUrl = `/sounds/${key}.wav`;
+          try {
+            const head = await fetch(staticUrl, { method: 'HEAD' });
+            if (head.ok) {
+              newSounds[key] = staticUrl;
+              return;
+            }
+          } catch (e) {
+            // ignore network errors and fall back to API
+          }
+
           const res = await fetch('/api/sound', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -117,9 +129,14 @@ export default function GameClient() {
           const json = await res.json();
           if (json && json.soundDataUri) {
             newSounds[key] = json.soundDataUri;
+          } else {
+            // Fallback to static public asset (if present).
+            newSounds[key] = staticUrl;
           }
         } catch (err) {
           console.error('Error fetching sound', key, err);
+          // fallback to static public asset url
+          newSounds[key] = `/sounds/${key}.wav`;
         }
       }));
       setSounds(newSounds);

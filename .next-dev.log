@@ -1,0 +1,107 @@
+
+> nextn@0.1.0 dev
+> next dev --turbopack -p 9002
+
+   ▲ Next.js 15.3.3 (Turbopack)
+   - Local:        http://localhost:9002
+   - Network:      http://10.0.1.17:9002
+   - Environments: .env
+
+ ✓ Starting...
+ ✓ Ready in 2.5s
+ ○ Compiling / ...
+ ✓ Compiled / in 10.9s
+ HEAD / 200 in 12466ms
+ ○ Compiling /api/sound ...
+ ✓ Compiled /api/sound in 6.5s
+ ⨯ ./src/lib/static-sounds.ts:54:1
+Ecmascript file had an error
+[0m [90m 52 |[39m }[33m;[39m[0m
+[0m [90m 53 |[39m[0m
+[0m[31m[1m>[22m[39m[90m 54 |[39m [36mexport[39m [36mdefault[39m [33mSTATIC_SOUNDS[39m[33m;[39m[0m
+[0m [90m    |[39m [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[0m
+[0m [90m 55 |[39m[0m
+
+the name `default` is exported multiple times
+
+
+ ○ Compiling /_error ...
+ ✓ Compiled /_error in 2.4s
+ POST /api/sound 500 in 9388ms
+ ⨯ ./src/lib/static-sounds.ts:54:1
+Ecmascript file had an error
+[0m [90m 52 |[39m }[33m;[39m[0m
+[0m [90m 53 |[39m[0m
+[0m[31m[1m>[22m[39m[90m 54 |[39m [36mexport[39m [36mdefault[39m [33mSTATIC_SOUNDS[39m[33m;[39m[0m
+[0m [90m    |[39m [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[0m
+[0m [90m 55 |[39m[0m
+
+the name `default` is exported multiple times
+
+
+ POST /api/sound 500 in 101ms
+ POST /api/sound 200 in 2963ms
+ POST /api/sound 200 in 2225ms
+Error: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent: [429 Too Many Requests] You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/usage?tab=rate-limit. 
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 15, model: gemini-2.5-flash-tts
+Please retry in 11.700169054s.
+    at async fetchWithRetries (src/ai/flows/game-sounds-flow.ts:48:21)
+    at async (src/ai/flows/game-sounds-flow.ts:106:24)
+    at async getGameSoundSafe (src/ai/flows/game-sounds-flow.ts:128:21)
+    at async POST (src/app/api/sound/route.ts:10:8)
+  46 |   while (attempt < maxAttempts) {
+  47 |     try {
+> 48 |       const result = await ai.generate({
+     |                     ^
+  49 |         model: googleAI.model('gemini-2.5-flash-preview-tts'),
+  50 |         config: {
+  51 |           responseModalities: ['AUDIO'],
+Error: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent: [429 Too Many Requests] You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/usage?tab=rate-limit. 
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 15, model: gemini-2.5-flash-tts
+Please retry in 10.975733557s.
+    at async fetchWithRetries (src/ai/flows/game-sounds-flow.ts:48:21)
+    at async (src/ai/flows/game-sounds-flow.ts:106:24)
+    at async getGameSoundSafe (src/ai/flows/game-sounds-flow.ts:128:21)
+    at async POST (src/app/api/sound/route.ts:10:8)
+  46 |   while (attempt < maxAttempts) {
+  47 |     try {
+> 48 |       const result = await ai.generate({
+     |                     ^
+  49 |         model: googleAI.model('gemini-2.5-flash-preview-tts'),
+  50 |         config: {
+  51 |           responseModalities: ['AUDIO'],
+Error: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent: [429 Too Many Requests] You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/usage?tab=rate-limit. 
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 15, model: gemini-2.5-flash-tts
+Please retry in 9.848924662s.
+    at async fetchWithRetries (src/ai/flows/game-sounds-flow.ts:48:21)
+    at async (src/ai/flows/game-sounds-flow.ts:106:24)
+    at async getGameSoundSafe (src/ai/flows/game-sounds-flow.ts:128:21)
+    at async POST (src/app/api/sound/route.ts:10:8)
+  46 |   while (attempt < maxAttempts) {
+  47 |     try {
+> 48 |       const result = await ai.generate({
+     |                     ^
+  49 |         model: googleAI.model('gemini-2.5-flash-preview-tts'),
+  50 |         config: {
+  51 |           responseModalities: ['AUDIO'],
+gameSoundFlow failed, using static fallback. Reason: Error: Failed to fetch from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent: [429 Too Many Requests] You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/usage?tab=rate-limit. 
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 15, model: gemini-2.5-flash-tts
+Please retry in 9.848924662s.
+    at async fetchWithRetries (src/ai/flows/game-sounds-flow.ts:48:21)
+    at async (src/ai/flows/game-sounds-flow.ts:106:24)
+    at async getGameSoundSafe (src/ai/flows/game-sounds-flow.ts:128:21)
+    at async POST (src/app/api/sound/route.ts:10:8)
+  46 |   while (attempt < maxAttempts) {
+  47 |     try {
+> 48 |       const result = await ai.generate({
+     |                     ^
+  49 |         model: googleAI.model('gemini-2.5-flash-preview-tts'),
+  50 |         config: {
+  51 |           responseModalities: ['AUDIO'], {
+  traceId: '76d594599a11702671909b3ac667f25b',
+  ignoreFailedSpan: true
+}
+ POST /api/sound 200 in 4176ms
+ ○ Compiling /_not-found/page ...
+ ✓ Compiled /_not-found/page in 1798ms
+ HEAD /sounds/does-not-exist.wav 404 in 1897ms
