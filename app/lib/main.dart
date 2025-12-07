@@ -1,20 +1,30 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'dart:io';
+import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 
-const String apiBaseUrl = 'http://10.0.2.2:9002';
+// Default API base for Android emulator -> localhost of host machine
+String apiBaseUrl = 'http://10.0.2.2:9002';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   try {
     await dotenv.load();
+    // Allow overriding the API base URL from an environment variable
+    apiBaseUrl = dotenv.env['WEB_API_BASE_URL'] ?? apiBaseUrl;
+
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
     runApp(const MyApp());
   } catch (e) {
+    // If dotenv or Firebase fail, still run the app using defaults
     runApp(const MyApp());
   }
 }
@@ -385,11 +395,19 @@ class _GameScreenState extends State<GameScreen> {
   bool gameOver = false;
   bool won = false;
   bool isSoundMuted = false;
+  late final AudioPlayer _audioPlayer;
 
   @override
   void initState() {
     super.initState();
     _initializeGame();
+    _audioPlayer = AudioPlayer();
+  }
+
+  @override
+  void dispose() {
+    _audioPlayer.dispose();
+    super.dispose();
   }
 
   void _initializeGame() {
@@ -407,6 +425,13 @@ class _GameScreenState extends State<GameScreen> {
       guessedLetters.add(letter);
       _checkWin();
     });
+    // Play feedback sound based on guess correctness
+    final lower = letter.toLowerCase();
+    if (currentWord.contains(lower)) {
+      _playSound('correct');
+    } else {
+      _playSound('incorrect');
+    }
   }
 
   void _checkWin() {
@@ -418,11 +443,38 @@ class _GameScreenState extends State<GameScreen> {
         gameOver = true;
         won = true;
       });
+      Future.microtask(() => _playSound('win'));
     } else if (guessedLetters.length >= 6) {
       setState(() {
         gameOver = true;
         won = false;
       });
+    }
+  }
+
+  Future<void> _playSound(String key) async {
+    if (isSoundMuted) return;
+    try {
+      final uri = Uri.parse('\$apiBaseUrl/api/sound');
+      final res = await http.post(uri,
+          headers: {'Content-Type': 'application/json'}, body: jsonEncode({'sound': key}));
+      if (res.statusCode != 200) return;
+      final Map<String, dynamic> body = jsonDecode(res.body);
+      final String? dataUri = body['soundDataUri'];
+      if (dataUri == null) return;
+      // dataUri is like: data:audio/wav;base64,AAAA...
+      final parts = dataUri.split(',');
+      if (parts.length != 2) return;
+      final rawBase64 = parts[1];
+      final bytes = base64Decode(rawBase64);
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/$key.wav');
+      await file.writeAsBytes(bytes, flush: true);
+      await _audioPlayer.play(DeviceFileSource(file.path));
+    } catch (e) {
+      // ignore errors silently for now
+      // print('playSound error: '
+      //     '\$e');
     }
   }
 
