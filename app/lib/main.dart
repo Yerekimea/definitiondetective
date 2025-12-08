@@ -41,9 +41,13 @@ class LeaderboardScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Leaderboard'), centerTitle: true),
       body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance.collection('userProfiles').orderBy('totalScore', descending: true).snapshots(),
+        stream: FirebaseFirestore.instance
+            .collection('userProfiles')
+            .orderBy('totalScore', descending: true)
+            .snapshots(),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+          if (snapshot.connectionState == ConnectionState.waiting)
+            return const Center(child: CircularProgressIndicator());
           final docs = snapshot.data?.docs ?? [];
           return ListView.builder(
             itemCount: docs.length,
@@ -54,7 +58,11 @@ class LeaderboardScreen extends StatelessWidget {
               final level = data['highestLevel'] ?? 1;
               final rank = index + 1;
               return ListTile(
-                leading: CircleAvatar(child: Text(username.toString().substring(0,1).toUpperCase())),
+                leading: CircleAvatar(
+                  child: Text(
+                    username.toString().substring(0, 1).toUpperCase(),
+                  ),
+                ),
                 title: Text('$rank. $username'),
                 subtitle: Text('Level $level'),
                 trailing: Text(score.toString()),
@@ -71,31 +79,71 @@ class StoreScreen extends StatelessWidget {
   const StoreScreen({super.key});
 
   final List<Map<String, dynamic>> themes = const [
-    {'id': 'dark', 'name': 'Default Dark', 'description': 'The standard dark theme.'},
-    {'id': 'light', 'name': 'Default Light', 'description': 'The standard light theme.'},
-    {'id': 'noir', 'name': 'Film Noir', 'description': 'A classic black and white detective look.', 'isPurchasable': true},
-    {'id': 'cyberpunk', 'name': 'Cyberpunk', 'description': 'A neon-lit futuristic theme.', 'isPurchasable': true},
+    {
+      'id': 'dark',
+      'name': 'Default Dark',
+      'description': 'The standard dark theme.',
+    },
+    {
+      'id': 'light',
+      'name': 'Default Light',
+      'description': 'The standard light theme.',
+    },
+    {
+      'id': 'noir',
+      'name': 'Film Noir',
+      'description': 'A classic black and white detective look.',
+      'isPurchasable': true,
+    },
+    {
+      'id': 'cyberpunk',
+      'name': 'Cyberpunk',
+      'description': 'A neon-lit futuristic theme.',
+      'isPurchasable': true,
+    },
   ];
 
   final List<Map<String, dynamic>> hintPacks = const [
-    {'id': 'small_hints', 'name': '5 Hint Pack', 'amount': 5, 'description': 'A few hints to get you unstuck.'},
-    {'id': 'large_hints', 'name': '25 Hint Pack', 'amount': 25, 'description': 'Enough hints for the toughest cases.'},
+    {
+      'id': 'small_hints',
+      'name': '5 Hint Pack',
+      'amount': 5,
+      'description': 'A few hints to get you unstuck.',
+    },
+    {
+      'id': 'large_hints',
+      'name': '25 Hint Pack',
+      'amount': 25,
+      'description': 'Enough hints for the toughest cases.',
+    },
   ];
 
   Future<void> _purchaseHints(BuildContext context, int amount) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
-    final ref = FirebaseFirestore.instance.collection('userProfiles').doc(user.uid);
-    await ref.set({'hints': FieldValue.increment(amount)}, SetOptions(merge: true));
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Received $amount hints')));
+    final ref = FirebaseFirestore.instance
+        .collection('userProfiles')
+        .doc(user.uid);
+    await ref.set({
+      'hints': FieldValue.increment(amount),
+    }, SetOptions(merge: true));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Received $amount hints')));
   }
 
   Future<void> _purchaseTheme(BuildContext context, String themeId) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
-    final ref = FirebaseFirestore.instance.collection('userProfiles').doc(user.uid);
-    await ref.set({'purchasedThemes': FieldValue.arrayUnion([themeId])}, SetOptions(merge: true));
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Applied theme $themeId')));
+    final ref = FirebaseFirestore.instance
+        .collection('userProfiles')
+        .doc(user.uid);
+    await ref.set({
+      'purchasedThemes': FieldValue.arrayUnion([themeId]),
+    }, SetOptions(merge: true));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Applied theme $themeId')));
   }
 
   @override
@@ -108,25 +156,41 @@ class StoreScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Cosmetic Themes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const Text(
+                'Cosmetic Themes',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 12),
-              ...themes.map((t) => Card(
-                child: ListTile(
-                  title: Text(t['name']),
-                  subtitle: Text(t['description']),
-                  trailing: ElevatedButton(onPressed: () => _purchaseTheme(context, t['id']), child: const Text('Apply')),
+              ...themes.map(
+                (t) => Card(
+                  child: ListTile(
+                    title: Text(t['name']),
+                    subtitle: Text(t['description']),
+                    trailing: ElevatedButton(
+                      onPressed: () => _purchaseTheme(context, t['id']),
+                      child: const Text('Apply'),
+                    ),
+                  ),
                 ),
-              )),
+              ),
               const SizedBox(height: 24),
-              const Text('Hint Packs', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const Text(
+                'Hint Packs',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 12),
-              ...hintPacks.map((p) => Card(
-                child: ListTile(
-                  title: Text(p['name']),
-                  subtitle: Text(p['description']),
-                  trailing: ElevatedButton(onPressed: () => _purchaseHints(context, p['amount']), child: const Text('Purchase')),
+              ...hintPacks.map(
+                (p) => Card(
+                  child: ListTile(
+                    title: Text(p['name']),
+                    subtitle: Text(p['description']),
+                    trailing: ElevatedButton(
+                      onPressed: () => _purchaseHints(context, p['amount']),
+                      child: const Text('Purchase'),
+                    ),
+                  ),
                 ),
-              )),
+              ),
             ],
           ),
         ),
@@ -154,43 +218,68 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _saveUsername() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
-    final ref = FirebaseFirestore.instance.collection('userProfiles').doc(user.uid);
+    final ref = FirebaseFirestore.instance
+        .collection('userProfiles')
+        .doc(user.uid);
     await ref.set({'username': _controller.text}, SetOptions(merge: true));
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile saved')));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Profile saved')));
   }
 
   Future<void> _deleteAccount() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
-    await FirebaseFirestore.instance.collection('userProfiles').doc(user.uid).delete();
+    await FirebaseFirestore.instance
+        .collection('userProfiles')
+        .doc(user.uid)
+        .delete();
     await user.delete();
-    Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const LoginScreen()));
+    Navigator.of(
+      context,
+    ).pushReplacement(MaterialPageRoute(builder: (_) => const LoginScreen()));
   }
 
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return const LoginScreen();
-    final docRef = FirebaseFirestore.instance.collection('userProfiles').doc(user.uid);
+    final docRef = FirebaseFirestore.instance
+        .collection('userProfiles')
+        .doc(user.uid);
     return Scaffold(
       appBar: AppBar(title: const Text('Profile')),
       body: StreamBuilder<DocumentSnapshot>(
         stream: docRef.snapshots(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+          if (!snapshot.hasData)
+            return const Center(child: CircularProgressIndicator());
           final data = snapshot.data!.data() as Map<String, dynamic>? ?? {};
           _controller.text = data['username'] ?? user.email ?? 'Player';
           return Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
               children: [
-                CircleAvatar(radius: 40, child: Text(_controller.text.substring(0,1).toUpperCase())),
+                CircleAvatar(
+                  radius: 40,
+                  child: Text(_controller.text.substring(0, 1).toUpperCase()),
+                ),
                 const SizedBox(height: 12),
-                TextField(controller: _controller, decoration: const InputDecoration(labelText: 'Username')),
+                TextField(
+                  controller: _controller,
+                  decoration: const InputDecoration(labelText: 'Username'),
+                ),
                 const SizedBox(height: 12),
-                ElevatedButton(onPressed: _saveUsername, child: const Text('Save')),
+                ElevatedButton(
+                  onPressed: _saveUsername,
+                  child: const Text('Save'),
+                ),
                 const SizedBox(height: 12),
-                ElevatedButton(onPressed: _deleteAccount, style: ElevatedButton.styleFrom(backgroundColor: Colors.red), child: const Text('Delete Account')),
+                ElevatedButton(
+                  onPressed: _deleteAccount,
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                  child: const Text('Delete Account'),
+                ),
               ],
             ),
           );
@@ -208,17 +297,28 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final TextEditingController _email = TextEditingController(text: 'alex.doe@example.com');
-  final TextEditingController _password = TextEditingController(text: 'password');
+  final TextEditingController _email = TextEditingController(
+    text: 'alex.doe@example.com',
+  );
+  final TextEditingController _password = TextEditingController(
+    text: 'password',
+  );
   bool _loading = false;
 
   Future<void> _login() async {
     setState(() => _loading = true);
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(email: _email.text, password: _password.text);
-      Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const HomeScreen()));
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: _email.text,
+        password: _password.text,
+      );
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (_) => const HomeScreen()));
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Login error: $e')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Login error: $e')));
     } finally {
       setState(() => _loading = false);
     }
@@ -232,10 +332,20 @@ class _LoginScreenState extends State<LoginScreen> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            TextField(controller: _email, decoration: const InputDecoration(labelText: 'Email')),
-            TextField(controller: _password, decoration: const InputDecoration(labelText: 'Password'), obscureText: true),
+            TextField(
+              controller: _email,
+              decoration: const InputDecoration(labelText: 'Email'),
+            ),
+            TextField(
+              controller: _password,
+              decoration: const InputDecoration(labelText: 'Password'),
+              obscureText: true,
+            ),
             const SizedBox(height: 12),
-            ElevatedButton(onPressed: _loading ? null : _login, child: Text(_loading ? 'Signing in...' : 'Sign in')),
+            ElevatedButton(
+              onPressed: _loading ? null : _login,
+              child: Text(_loading ? 'Signing in...' : 'Sign in'),
+            ),
           ],
         ),
       ),
@@ -252,28 +362,42 @@ class SignupScreen extends StatefulWidget {
 
 class _SignupScreenState extends State<SignupScreen> {
   final TextEditingController _name = TextEditingController(text: 'Alex Doe');
-  final TextEditingController _email = TextEditingController(text: 'alex.doe@example.com');
-  final TextEditingController _password = TextEditingController(text: 'password');
+  final TextEditingController _email = TextEditingController(
+    text: 'alex.doe@example.com',
+  );
+  final TextEditingController _password = TextEditingController(
+    text: 'password',
+  );
   bool _loading = false;
 
   Future<void> _signup() async {
     setState(() => _loading = true);
     try {
-      final cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(email: _email.text, password: _password.text);
+      final cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: _email.text,
+        password: _password.text,
+      );
       final uid = cred.user?.uid;
       if (uid != null) {
-        await FirebaseFirestore.instance.collection('userProfiles').doc(uid).set({
-          'username': _name.text,
-          'email': _email.text,
-          'totalScore': 0,
-          'highestLevel': 1,
-          'rank': 'Novice',
-          'hints': 0,
-        });
+        await FirebaseFirestore.instance
+            .collection('userProfiles')
+            .doc(uid)
+            .set({
+              'username': _name.text,
+              'email': _email.text,
+              'totalScore': 0,
+              'highestLevel': 1,
+              'rank': 'Novice',
+              'hints': 0,
+            });
       }
-      Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const HomeScreen()));
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (_) => const HomeScreen()));
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Signup error: $e')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Signup error: $e')));
     } finally {
       setState(() => _loading = false);
     }
@@ -287,11 +411,24 @@ class _SignupScreenState extends State<SignupScreen> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            TextField(controller: _name, decoration: const InputDecoration(labelText: 'Name')),
-            TextField(controller: _email, decoration: const InputDecoration(labelText: 'Email')),
-            TextField(controller: _password, decoration: const InputDecoration(labelText: 'Password'), obscureText: true),
+            TextField(
+              controller: _name,
+              decoration: const InputDecoration(labelText: 'Name'),
+            ),
+            TextField(
+              controller: _email,
+              decoration: const InputDecoration(labelText: 'Email'),
+            ),
+            TextField(
+              controller: _password,
+              decoration: const InputDecoration(labelText: 'Password'),
+              obscureText: true,
+            ),
             const SizedBox(height: 12),
-            ElevatedButton(onPressed: _loading ? null : _signup, child: Text(_loading ? 'Creating account...' : 'Create Account')),
+            ElevatedButton(
+              onPressed: _loading ? null : _signup,
+              child: Text(_loading ? 'Creating account...' : 'Create Account'),
+            ),
           ],
         ),
       ),
@@ -342,7 +479,9 @@ class CustomHeader extends StatelessWidget {
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
-            color: Theme.of(context).colorScheme.outline.withAlpha((0.2 * 255).toInt()),
+            color: Theme.of(
+              context,
+            ).colorScheme.outline.withAlpha((0.2 * 255).toInt()),
           ),
         ),
         color: Theme.of(context).scaffoldBackgroundColor,
@@ -364,8 +503,8 @@ class CustomHeader extends StatelessWidget {
                   child: Text(
                     'Definition Detective',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                      fontWeight: FontWeight.bold,
+                    ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -375,15 +514,9 @@ class CustomHeader extends StatelessWidget {
           // Navigation links
           Row(
             children: [
-              _NavLink(
-                label: 'Leaderboard',
-                onTap: onLeaderboardTap,
-              ),
+              _NavLink(label: 'Leaderboard', onTap: onLeaderboardTap),
               const SizedBox(width: 24),
-              _NavLink(
-                label: 'Store',
-                onTap: onStoreTap,
-              ),
+              _NavLink(label: 'Store', onTap: onStoreTap),
             ],
           ),
           // Sound toggle and profile menu
@@ -433,11 +566,13 @@ class _NavLinkState extends State<_NavLink> {
         child: Text(
           widget.label,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: isHovered
-                    ? Theme.of(context).colorScheme.onSurface
-                    : Theme.of(context).colorScheme.onSurface.withAlpha((0.6 * 255).toInt()),
-                fontWeight: isHovered ? FontWeight.w600 : FontWeight.normal,
-              ),
+            color: isHovered
+                ? Theme.of(context).colorScheme.onSurface
+                : Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withAlpha((0.6 * 255).toInt()),
+            fontWeight: isHovered ? FontWeight.w600 : FontWeight.normal,
+          ),
         ),
       ),
     );
@@ -502,27 +637,27 @@ class _HomeScreenState extends State<HomeScreen> {
   bool isSoundMuted = false;
 
   void _startGame() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (context) => const GameScreen()),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (context) => const GameScreen()));
   }
 
   void _showLeaderboard() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Leaderboard coming soon!')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Leaderboard coming soon!')));
   }
 
   void _showStore() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Store coming soon!')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Store coming soon!')));
   }
 
   void _showProfile() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Profile coming soon!')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Profile coming soon!')));
   }
 
   void _toggleSound() {
@@ -558,20 +693,18 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 24),
                     Text(
                       'Definition Detective',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.bold),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 12),
                     Text(
                       'Guess the word from its definition!',
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withAlpha((0.7 * 255).toInt()),
-                          ),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withAlpha((0.7 * 255).toInt()),
+                      ),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 48),
@@ -580,10 +713,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
                         border: Border.all(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .outline
-                              .withAlpha((0.2 * 255).toInt()),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.outline.withAlpha((0.2 * 255).toInt()),
                         ),
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -591,9 +723,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         children: [
                           Text(
                             'Your Stats',
-                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                ),
+                            style: Theme.of(context).textTheme.titleLarge
+                                ?.copyWith(fontWeight: FontWeight.w600),
                           ),
                           const SizedBox(height: 20),
                           _buildStatRow(context, 'Score:', '$score'),
@@ -609,10 +740,12 @@ class _HomeScreenState extends State<HomeScreen> {
                                 horizontal: 32,
                                 vertical: 14,
                               ),
-                              backgroundColor:
-                                  Theme.of(context).colorScheme.primary,
-                              foregroundColor:
-                                  Theme.of(context).colorScheme.onPrimary,
+                              backgroundColor: Theme.of(
+                                context,
+                              ).colorScheme.primary,
+                              foregroundColor: Theme.of(
+                                context,
+                              ).colorScheme.onPrimary,
                             ),
                           ),
                         ],
@@ -634,16 +767,16 @@ class _HomeScreenState extends State<HomeScreen> {
       children: [
         Text(
           label,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w500,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
         ),
         Text(
           value,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.primary,
-              ),
+            fontWeight: FontWeight.bold,
+            color: Theme.of(context).colorScheme.primary,
+          ),
         ),
       ],
     );
@@ -726,8 +859,11 @@ class _GameScreenState extends State<GameScreen> {
     if (isSoundMuted) return;
     try {
       final uri = Uri.parse('\$apiBaseUrl/api/sound');
-      final res = await http.post(uri,
-          headers: {'Content-Type': 'application/json'}, body: jsonEncode({'sound': key}));
+      final res = await http.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'sound': key}),
+      );
       if (res.statusCode != 200) return;
       final Map<String, dynamic> body = jsonDecode(res.body);
       final String? dataUri = body['soundDataUri'];
@@ -758,8 +894,10 @@ class _GameScreenState extends State<GameScreen> {
   Widget build(BuildContext context) {
     final displayWord = currentWord
         .split('')
-        .map((letter) =>
-            guessedLetters.contains(letter.toLowerCase()) ? letter : '_')
+        .map(
+          (letter) =>
+              guessedLetters.contains(letter.toLowerCase()) ? letter : '_',
+        )
         .join(' ');
 
     return Scaffold(
@@ -779,10 +917,9 @@ class _GameScreenState extends State<GameScreen> {
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       border: Border.all(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .outline
-                            .withAlpha((0.2 * 255).toInt()),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.outline.withAlpha((0.2 * 255).toInt()),
                       ),
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -790,19 +927,16 @@ class _GameScreenState extends State<GameScreen> {
                       children: [
                         Text(
                           'Definition',
-                          style:
-                              Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w600),
                         ),
                         const SizedBox(height: 12),
                         Text(
                           definition,
                           textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
+                          style: Theme.of(context).textTheme.bodyLarge
+                              ?.copyWith(
+                                color: Theme.of(context).colorScheme.onSurface
                                     .withAlpha((0.8 * 255).toInt()),
                               ),
                         ),
@@ -814,10 +948,10 @@ class _GameScreenState extends State<GameScreen> {
                   Text(
                     displayWord,
                     style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 4,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 4,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
                   ),
                   const SizedBox(height: 32),
                   if (gameOver)
@@ -834,9 +968,7 @@ class _GameScreenState extends State<GameScreen> {
                         children: [
                           Text(
                             won ? 'You Won!' : 'Game Over',
-                            style: Theme.of(context)
-                                .textTheme
-                                .headlineSmall
+                            style: Theme.of(context).textTheme.headlineSmall
                                 ?.copyWith(
                                   fontWeight: FontWeight.bold,
                                   color: won ? Colors.green : Colors.red,
@@ -857,11 +989,12 @@ class _GameScreenState extends State<GameScreen> {
                                   setState(_initializeGame);
                                 },
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor:
-                                      Theme.of(context).colorScheme.primary,
-                                  foregroundColor: Theme.of(context)
-                                      .colorScheme
-                                      .onPrimary,
+                                  backgroundColor: Theme.of(
+                                    context,
+                                  ).colorScheme.primary,
+                                  foregroundColor: Theme.of(
+                                    context,
+                                  ).colorScheme.onPrimary,
                                 ),
                                 child: const Text('Play Again'),
                               ),
@@ -883,7 +1016,9 @@ class _GameScreenState extends State<GameScreen> {
                           runSpacing: 8,
                           children: 'abcdefghijklmnopqrstuvwxyz'
                               .split('')
-                              .map((letter) => _buildLetterButton(context, letter))
+                              .map(
+                                (letter) => _buildLetterButton(context, letter),
+                              )
                               .toList(),
                         ),
                         const SizedBox(height: 24),
@@ -892,9 +1027,9 @@ class _GameScreenState extends State<GameScreen> {
                             .isNotEmpty)
                           Text(
                             'Incorrect: ${guessedLetters.where((l) => !currentWord.contains(l)).join(', ').toUpperCase()}',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: Colors.red,
-                                ),
+                            style: Theme.of(
+                              context,
+                            ).textTheme.bodyMedium?.copyWith(color: Colors.red),
                           ),
                       ],
                     ),
@@ -923,20 +1058,16 @@ class _GameScreenState extends State<GameScreen> {
           foregroundColor: isGuessed
               ? Colors.white
               : Theme.of(context).colorScheme.onSurface,
-          disabledBackgroundColor:
-              isGuessed ? (isCorrect ? Colors.green : Colors.red) : null,
+          disabledBackgroundColor: isGuessed
+              ? (isCorrect ? Colors.green : Colors.red)
+              : null,
           disabledForegroundColor: isGuessed ? Colors.white : null,
           padding: EdgeInsets.zero,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
         child: Text(
           letter.toUpperCase(),
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
-          ),
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
         ),
       ),
     );

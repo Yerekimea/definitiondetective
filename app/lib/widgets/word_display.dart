@@ -4,10 +4,7 @@ import 'package:flutter/material.dart';
 class WordDisplay extends StatelessWidget {
   final List<Map<String, dynamic>> displayedWord;
 
-  const WordDisplay({
-    Key? key,
-    required this.displayedWord,
-  }) : super(key: key);
+  const WordDisplay({Key? key, required this.displayedWord}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -25,12 +22,7 @@ class WordDisplay extends StatelessWidget {
           width: 48,
           height: 56,
           decoration: BoxDecoration(
-            border: Border(
-              bottom: BorderSide(
-                color: Colors.blue,
-                width: 4,
-              ),
-            ),
+            border: Border(bottom: BorderSide(color: Colors.blue, width: 4)),
             color: Colors.grey[200],
             borderRadius: BorderRadius.circular(4),
           ),

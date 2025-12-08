@@ -55,10 +55,7 @@ const int MAX_INCORRECT_TRIES = 6;
 class GameScreen extends StatefulWidget {
   final String apiBaseUrl;
 
-  const GameScreen({
-    super.key,
-    required this.apiBaseUrl,
-  });
+  const GameScreen({super.key, required this.apiBaseUrl});
 
   @override
   State<GameScreen> createState() => _GameScreenState();
@@ -90,7 +87,9 @@ class _GameScreenState extends State<GameScreen> {
     super.initState();
     _audioPlayer = AudioPlayer();
     if (user != null) {
-      userProfileRef = FirebaseFirestore.instance.collection('userProfiles').doc(user!.uid);
+      userProfileRef = FirebaseFirestore.instance
+          .collection('userProfiles')
+          .doc(user!.uid);
     }
     _loadUserProfile();
     _loadSounds();
@@ -105,7 +104,9 @@ class _GameScreenState extends State<GameScreen> {
 
   void _initializeGame() {
     // For demo, just pick a random word; in production use actual game-data logic
-    currentWord = sampleWords[(DateTime.now().millisecondsSinceEpoch % sampleWords.length)];
+    currentWord =
+        sampleWords[(DateTime.now().millisecondsSinceEpoch %
+            sampleWords.length)];
     currentDefinition = currentWord.definition;
     guessedLetters.clear();
     correctLetters.clear();
@@ -120,7 +121,9 @@ class _GameScreenState extends State<GameScreen> {
   void _updateDisplayedWord() {
     displayedWord = currentWord.word.split('').map((char) {
       final lowerChar = char.toLowerCase();
-      final isRevealed = correctLetters.contains(lowerChar) || hintedLetters.contains(lowerChar);
+      final isRevealed =
+          correctLetters.contains(lowerChar) ||
+          hintedLetters.contains(lowerChar);
       return WordLetter(char: char, revealed: isRevealed);
     }).toList();
   }
@@ -231,7 +234,9 @@ class _GameScreenState extends State<GameScreen> {
     }
 
     // Check loss
-    final incorrectCount = guessedLetters.where((l) => !currentWord.word.toLowerCase().contains(l)).length;
+    final incorrectCount = guessedLetters
+        .where((l) => !currentWord.word.toLowerCase().contains(l))
+        .length;
     if (incorrectCount >= MAX_INCORRECT_TRIES) {
       gameOver = true;
     }
@@ -240,7 +245,9 @@ class _GameScreenState extends State<GameScreen> {
   Future<void> _requestHint() async {
     if (isLoadingHint || (user != null && hints <= 0)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No hints available. Watch an ad or buy more.')),
+        const SnackBar(
+          content: Text('No hints available. Watch an ad or buy more.'),
+        ),
       );
       return;
     }
@@ -250,7 +257,9 @@ class _GameScreenState extends State<GameScreen> {
     try {
       // Deduct hint from profile
       if (user != null && hints > 0) {
-        await userProfileRef.set({'hints': FieldValue.increment(-1)}, SetOptions(merge: true));
+        await userProfileRef.set({
+          'hints': FieldValue.increment(-1),
+        }, SetOptions(merge: true));
       }
 
       // Request hint from API
@@ -260,7 +269,9 @@ class _GameScreenState extends State<GameScreen> {
             headers: {'Content-Type': 'application/json'},
             body: jsonEncode({
               'word': currentWord.word,
-              'incorrectGuesses': guessedLetters.where((l) => !currentWord.word.toLowerCase().contains(l)).toList(),
+              'incorrectGuesses': guessedLetters
+                  .where((l) => !currentWord.word.toLowerCase().contains(l))
+                  .toList(),
               'lettersToReveal': hintedLetters.length + 2,
             }),
           )
@@ -272,7 +283,11 @@ class _GameScreenState extends State<GameScreen> {
         if (hint != null) {
           setState(() {
             currentHint = hint;
-            final newLetters = hint.split('').where((c) => c != '_').map((c) => c.toLowerCase()).toSet();
+            final newLetters = hint
+                .split('')
+                .where((c) => c != '_')
+                .map((c) => c.toLowerCase())
+                .toSet();
             hintedLetters.addAll(newLetters);
             _updateDisplayedWord();
           });
@@ -280,7 +295,9 @@ class _GameScreenState extends State<GameScreen> {
       } else {
         // Refund hint on error
         if (user != null) {
-          await userProfileRef.set({'hints': FieldValue.increment(1)}, SetOptions(merge: true));
+          await userProfileRef.set({
+            'hints': FieldValue.increment(1),
+          }, SetOptions(merge: true));
         }
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Failed to get hint. Try again.')),
@@ -288,9 +305,9 @@ class _GameScreenState extends State<GameScreen> {
       }
     } catch (e) {
       debugPrint('Error requesting hint: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
     } finally {
       setState(() => isLoadingHint = false);
     }
@@ -304,7 +321,9 @@ class _GameScreenState extends State<GameScreen> {
         onComplete: () async {
           // Increment hints
           if (user != null) {
-            await userProfileRef.set({'hints': FieldValue.increment(1)}, SetOptions(merge: true));
+            await userProfileRef.set({
+              'hints': FieldValue.increment(1),
+            }, SetOptions(merge: true));
             setState(() => hints++);
           }
           // Auto-use the hint
@@ -317,14 +336,11 @@ class _GameScreenState extends State<GameScreen> {
   Future<void> _updateFirestoreUser(int scoreGained, int newLevel) async {
     if (user == null) return;
     try {
-      await userProfileRef.set(
-        {
-          'totalScore': FieldValue.increment(scoreGained),
-          'highestLevel': newLevel,
-          'updatedAt': FieldValue.serverTimestamp(),
-        },
-        SetOptions(merge: true),
-      );
+      await userProfileRef.set({
+        'totalScore': FieldValue.increment(scoreGained),
+        'highestLevel': newLevel,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
       setState(() {
         score += scoreGained;
         level = newLevel;
@@ -336,8 +352,12 @@ class _GameScreenState extends State<GameScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final incorrectCount = guessedLetters.where((l) => !currentWord.word.toLowerCase().contains(l)).length;
-    final incorrectLetters = guessedLetters.where((l) => !currentWord.word.toLowerCase().contains(l)).toList();
+    final incorrectCount = guessedLetters
+        .where((l) => !currentWord.word.toLowerCase().contains(l))
+        .length;
+    final incorrectLetters = guessedLetters
+        .where((l) => !currentWord.word.toLowerCase().contains(l))
+        .toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -358,9 +378,9 @@ class _GameScreenState extends State<GameScreen> {
               backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
               child: Text(
                 currentDefinition,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      fontStyle: FontStyle.italic,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyLarge?.copyWith(fontStyle: FontStyle.italic),
               ),
             ),
 
@@ -387,9 +407,9 @@ class _GameScreenState extends State<GameScreen> {
             if (incorrectLetters.isNotEmpty)
               Text(
                 'Incorrect (${incorrectCount}/${MAX_INCORRECT_TRIES}): ${incorrectLetters.join(', ').toUpperCase()}',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.red,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: Colors.red),
               ),
 
             // Game state: result or playing

@@ -23,10 +23,7 @@ class GameCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              title,
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
+            Text(title, style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 12),
             child,
           ],
@@ -41,11 +38,7 @@ class WordDisplay extends StatelessWidget {
   final List<WordLetter> displayedWord;
   final int? wordLength;
 
-  const WordDisplay({
-    super.key,
-    required this.displayedWord,
-    this.wordLength,
-  });
+  const WordDisplay({super.key, required this.displayedWord, this.wordLength});
 
   @override
   Widget build(BuildContext context) {
@@ -56,11 +49,13 @@ class WordDisplay extends StatelessWidget {
       children: displayedWord
           .asMap()
           .entries
-          .map((entry) => _WordLetterBox(
-                char: entry.value.char,
-                revealed: entry.value.revealed,
-                index: entry.key,
-              ))
+          .map(
+            (entry) => _WordLetterBox(
+              char: entry.value.char,
+              revealed: entry.value.revealed,
+              index: entry.key,
+            ),
+          )
           .toList(),
     );
   }
@@ -108,9 +103,9 @@ class _WordLetterBox extends StatelessWidget {
             ? Text(
                 char.toUpperCase(),
                 style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.onSecondaryContainer,
-                    ),
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSecondaryContainer,
+                ),
               )
             : const SizedBox(),
       ),
@@ -144,20 +139,23 @@ class KeyboardWidget extends StatelessWidget {
     return Column(
       spacing: 8,
       children: keys
-          .map((row) => Wrap(
-                spacing: 4,
-                alignment: WrapAlignment.center,
-                children: row
-                    .map((letter) => _KeyboardButton(
-                          letter: letter,
-                          isGuessed: guessedLetters.contains(letter.toLowerCase()),
-                          isCorrect:
-                              correctLetters.contains(letter.toLowerCase()),
-                          isHinted: hintedLetters.contains(letter.toLowerCase()),
-                          onPressed: () => onKeyTap(letter.toLowerCase()),
-                        ))
-                    .toList(),
-              ))
+          .map(
+            (row) => Wrap(
+              spacing: 4,
+              alignment: WrapAlignment.center,
+              children: row
+                  .map(
+                    (letter) => _KeyboardButton(
+                      letter: letter,
+                      isGuessed: guessedLetters.contains(letter.toLowerCase()),
+                      isCorrect: correctLetters.contains(letter.toLowerCase()),
+                      isHinted: hintedLetters.contains(letter.toLowerCase()),
+                      onPressed: () => onKeyTap(letter.toLowerCase()),
+                    ),
+                  )
+                  .toList(),
+            ),
+          )
           .toList(),
     );
   }
@@ -201,20 +199,16 @@ class _KeyboardButton extends StatelessWidget {
         style: ElevatedButton.styleFrom(
           backgroundColor: backgroundColor,
           foregroundColor: foregroundColor,
-          disabledBackgroundColor:
-              isGuessed ? (isCorrect ? Colors.green : Colors.red) : null,
+          disabledBackgroundColor: isGuessed
+              ? (isCorrect ? Colors.green : Colors.red)
+              : null,
           disabledForegroundColor: isGuessed ? Colors.white : null,
           padding: EdgeInsets.zero,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(6),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
         ),
         child: Text(
           letter,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 12,
-          ),
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
         ),
       ),
     );
@@ -256,28 +250,18 @@ class ResultDialog extends StatelessWidget {
           Text(
             word.toUpperCase(),
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: isWon ? Colors.green : Colors.red,
-                ),
+              fontWeight: FontWeight.bold,
+              color: isWon ? Colors.green : Colors.red,
+            ),
           ),
           const SizedBox(height: 12),
           if (isWon)
-            Text(
-              scoreText,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
+            Text(scoreText, style: Theme.of(context).textTheme.bodyMedium),
         ],
       ),
       actions: [
-        if (!isWon)
-          TextButton(
-            onPressed: onRetry,
-            child: const Text('Retry'),
-          ),
-        TextButton(
-          onPressed: onHome,
-          child: const Text('Home'),
-        ),
+        if (!isWon) TextButton(onPressed: onRetry, child: const Text('Retry')),
+        TextButton(onPressed: onHome, child: const Text('Home')),
       ],
     );
   }
@@ -301,11 +285,7 @@ class ScoreBadge extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
-        _BadgeItem(
-          icon: Icons.stars,
-          label: 'Score',
-          value: score.toString(),
-        ),
+        _BadgeItem(icon: Icons.stars, label: 'Score', value: score.toString()),
         _BadgeItem(
           icon: Icons.lightbulb,
           label: 'Hints',
@@ -339,15 +319,12 @@ class _BadgeItem extends StatelessWidget {
       children: [
         Icon(icon, size: 24),
         const SizedBox(height: 4),
-        Text(
-          label,
-          style: Theme.of(context).textTheme.labelSmall,
-        ),
+        Text(label, style: Theme.of(context).textTheme.labelSmall),
         Text(
           value,
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold),
         ),
       ],
     );
@@ -358,10 +335,7 @@ class _BadgeItem extends StatelessWidget {
 class AdProgressDialog extends StatefulWidget {
   final VoidCallback onComplete;
 
-  const AdProgressDialog({
-    super.key,
-    required this.onComplete,
-  });
+  const AdProgressDialog({super.key, required this.onComplete});
 
   @override
   State<AdProgressDialog> createState() => _AdProgressDialogState();
@@ -411,15 +385,9 @@ class _AdProgressDialogState extends State<AdProgressDialog> {
             ),
           ),
           const SizedBox(height: 16),
-          LinearProgressIndicator(
-            value: _progress / 100,
-            minHeight: 8,
-          ),
+          LinearProgressIndicator(value: _progress / 100, minHeight: 8),
           const SizedBox(height: 8),
-          Text(
-            '$_progress%',
-            style: Theme.of(context).textTheme.labelMedium,
-          ),
+          Text('$_progress%', style: Theme.of(context).textTheme.labelMedium),
         ],
       ),
     );
