@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
@@ -26,6 +28,274 @@ Future<void> main() async {
   } catch (e) {
     // If dotenv or Firebase fail, still run the app using defaults
     runApp(const MyApp());
+  }
+}
+
+// ------------------------- Additional Screens -------------------------
+
+class LeaderboardScreen extends StatelessWidget {
+  const LeaderboardScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Leaderboard'), centerTitle: true),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance.collection('userProfiles').orderBy('totalScore', descending: true).snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+          final docs = snapshot.data?.docs ?? [];
+          return ListView.builder(
+            itemCount: docs.length,
+            itemBuilder: (context, index) {
+              final data = docs[index].data() as Map<String, dynamic>;
+              final username = data['username'] ?? 'Player';
+              final score = data['totalScore'] ?? 0;
+              final level = data['highestLevel'] ?? 1;
+              final rank = index + 1;
+              return ListTile(
+                leading: CircleAvatar(child: Text(username.toString().substring(0,1).toUpperCase())),
+                title: Text('$rank. $username'),
+                subtitle: Text('Level $level'),
+                trailing: Text(score.toString()),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+class StoreScreen extends StatelessWidget {
+  const StoreScreen({super.key});
+
+  final List<Map<String, dynamic>> themes = const [
+    {'id': 'dark', 'name': 'Default Dark', 'description': 'The standard dark theme.'},
+    {'id': 'light', 'name': 'Default Light', 'description': 'The standard light theme.'},
+    {'id': 'noir', 'name': 'Film Noir', 'description': 'A classic black and white detective look.', 'isPurchasable': true},
+    {'id': 'cyberpunk', 'name': 'Cyberpunk', 'description': 'A neon-lit futuristic theme.', 'isPurchasable': true},
+  ];
+
+  final List<Map<String, dynamic>> hintPacks = const [
+    {'id': 'small_hints', 'name': '5 Hint Pack', 'amount': 5, 'description': 'A few hints to get you unstuck.'},
+    {'id': 'large_hints', 'name': '25 Hint Pack', 'amount': 25, 'description': 'Enough hints for the toughest cases.'},
+  ];
+
+  Future<void> _purchaseHints(BuildContext context, int amount) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    final ref = FirebaseFirestore.instance.collection('userProfiles').doc(user.uid);
+    await ref.set({'hints': FieldValue.increment(amount)}, SetOptions(merge: true));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Received $amount hints')));
+  }
+
+  Future<void> _purchaseTheme(BuildContext context, String themeId) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    final ref = FirebaseFirestore.instance.collection('userProfiles').doc(user.uid);
+    await ref.set({'purchasedThemes': FieldValue.arrayUnion([themeId])}, SetOptions(merge: true));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Applied theme $themeId')));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Store'), centerTitle: true),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Cosmetic Themes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 12),
+              ...themes.map((t) => Card(
+                child: ListTile(
+                  title: Text(t['name']),
+                  subtitle: Text(t['description']),
+                  trailing: ElevatedButton(onPressed: () => _purchaseTheme(context, t['id']), child: const Text('Apply')),
+                ),
+              )),
+              const SizedBox(height: 24),
+              const Text('Hint Packs', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 12),
+              ...hintPacks.map((p) => Card(
+                child: ListTile(
+                  title: Text(p['name']),
+                  subtitle: Text(p['description']),
+                  trailing: ElevatedButton(onPressed: () => _purchaseHints(context, p['amount']), child: const Text('Purchase')),
+                ),
+              )),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class ProfileScreen extends StatefulWidget {
+  const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _saveUsername() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    final ref = FirebaseFirestore.instance.collection('userProfiles').doc(user.uid);
+    await ref.set({'username': _controller.text}, SetOptions(merge: true));
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile saved')));
+  }
+
+  Future<void> _deleteAccount() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    await FirebaseFirestore.instance.collection('userProfiles').doc(user.uid).delete();
+    await user.delete();
+    Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const LoginScreen()));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return const LoginScreen();
+    final docRef = FirebaseFirestore.instance.collection('userProfiles').doc(user.uid);
+    return Scaffold(
+      appBar: AppBar(title: const Text('Profile')),
+      body: StreamBuilder<DocumentSnapshot>(
+        stream: docRef.snapshots(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+          final data = snapshot.data!.data() as Map<String, dynamic>? ?? {};
+          _controller.text = data['username'] ?? user.email ?? 'Player';
+          return Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              children: [
+                CircleAvatar(radius: 40, child: Text(_controller.text.substring(0,1).toUpperCase())),
+                const SizedBox(height: 12),
+                TextField(controller: _controller, decoration: const InputDecoration(labelText: 'Username')),
+                const SizedBox(height: 12),
+                ElevatedButton(onPressed: _saveUsername, child: const Text('Save')),
+                const SizedBox(height: 12),
+                ElevatedButton(onPressed: _deleteAccount, style: ElevatedButton.styleFrom(backgroundColor: Colors.red), child: const Text('Delete Account')),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final TextEditingController _email = TextEditingController(text: 'alex.doe@example.com');
+  final TextEditingController _password = TextEditingController(text: 'password');
+  bool _loading = false;
+
+  Future<void> _login() async {
+    setState(() => _loading = true);
+    try {
+      await FirebaseAuth.instance.signInWithEmailAndPassword(email: _email.text, password: _password.text);
+      Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const HomeScreen()));
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Login error: $e')));
+    } finally {
+      setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Login')),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            TextField(controller: _email, decoration: const InputDecoration(labelText: 'Email')),
+            TextField(controller: _password, decoration: const InputDecoration(labelText: 'Password'), obscureText: true),
+            const SizedBox(height: 12),
+            ElevatedButton(onPressed: _loading ? null : _login, child: Text(_loading ? 'Signing in...' : 'Sign in')),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class SignupScreen extends StatefulWidget {
+  const SignupScreen({super.key});
+
+  @override
+  State<SignupScreen> createState() => _SignupScreenState();
+}
+
+class _SignupScreenState extends State<SignupScreen> {
+  final TextEditingController _name = TextEditingController(text: 'Alex Doe');
+  final TextEditingController _email = TextEditingController(text: 'alex.doe@example.com');
+  final TextEditingController _password = TextEditingController(text: 'password');
+  bool _loading = false;
+
+  Future<void> _signup() async {
+    setState(() => _loading = true);
+    try {
+      final cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(email: _email.text, password: _password.text);
+      final uid = cred.user?.uid;
+      if (uid != null) {
+        await FirebaseFirestore.instance.collection('userProfiles').doc(uid).set({
+          'username': _name.text,
+          'email': _email.text,
+          'totalScore': 0,
+          'highestLevel': 1,
+          'rank': 'Novice',
+          'hints': 0,
+        });
+      }
+      Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const HomeScreen()));
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Signup error: $e')));
+    } finally {
+      setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Sign Up')),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            TextField(controller: _name, decoration: const InputDecoration(labelText: 'Name')),
+            TextField(controller: _email, decoration: const InputDecoration(labelText: 'Email')),
+            TextField(controller: _password, decoration: const InputDecoration(labelText: 'Password'), obscureText: true),
+            const SizedBox(height: 12),
+            ElevatedButton(onPressed: _loading ? null : _signup, child: Text(_loading ? 'Creating account...' : 'Create Account')),
+          ],
+        ),
+      ),
+    );
   }
 }
 
