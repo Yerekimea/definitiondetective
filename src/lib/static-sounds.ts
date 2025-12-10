@@ -39,4 +39,5 @@ export async function getStaticSound(key: string) {
   }
 }
 
-export default getStaticSound;
+// Export as a named export only to avoid duplicate default-export issues
+export { getStaticSound };

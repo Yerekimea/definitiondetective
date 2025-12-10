@@ -11,7 +11,7 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import wav from 'wav';
 import {googleAI} from '@genkit-ai/google-genai';
-import getStaticSound from '@/lib/static-sounds';
+import { getStaticSound } from '@/lib/static-sounds';
 
 const GameSoundInputSchema = z
   .string()
