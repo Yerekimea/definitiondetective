@@ -1,0 +1,27 @@
+
+> nextn@0.1.0 dev
+> next dev --turbopack -p 9002
+
+   ▲ Next.js 15.3.3 (Turbopack)
+   - Local:        http://localhost:9002
+   - Network:      http://10.0.0.253:9002
+   - Environments: .env
+
+ ✓ Starting...
+ ✓ Ready in 1026ms
+ ○ Compiling / ...
+ ✓ Compiled / in 4.9s
+ GET / 200 in 5428ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 565ms
+ GET /favicon.ico?favicon.56766c03.ico 200 in 831ms
+ GET /favicon.ico?favicon.56766c03.ico 200 in 232ms
+ ○ Compiling /api/hint ...
+ ✓ Compiled /api/hint in 4.3s
+ POST /api/hint 200 in 6498ms
+ POST /api/hint 200 in 5139ms
+ POST /api/hint 200 in 10646ms
+ POST /api/hint 200 in 9878ms
+ ○ Compiling /store ...
+ ✓ Compiled /store in 1865ms
+ GET /store 200 in 1919ms
